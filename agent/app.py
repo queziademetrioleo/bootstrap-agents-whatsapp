@@ -13,13 +13,15 @@ Fluxo:
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, Request, Response
 
-from agent import core, db, pubsub_client, redis_client, security
+from agent import buffer, core, db, pubsub_client, redis_client, security
+from agent.config import get_settings
 from agent.logging_config import get_logger
 from agent.models import InboundMessage
 from agent.webhook_parse import parse_evolution_event
@@ -108,10 +110,38 @@ async def pubsub_push(
         log.exception("Payload Pub/Sub invalido — descartado")
         return Response(status_code=200)
 
+    s = get_settings()
+
+    # Sem debounce: processa cada mensagem na hora (comportamento original).
+    if s.debounce_seconds <= 0:
+        try:
+            await core.process_message(msg)
+        except Exception:  # noqa: BLE001
+            log.exception("Erro no processamento — retry via Pub/Sub")
+            return Response(status_code=500)
+        return Response(status_code=200)
+
+    # Com debounce: acumula a bolha e espera a janela de silencio.
     try:
-        await core.process_message(msg)
+        if not await buffer.should_buffer(msg):
+            return Response(status_code=200)  # duplicata — ignora
+
+        await asyncio.sleep(s.debounce_seconds)
+
+        # So a bolha mais recente faz o flush; as demais saem aqui.
+        if not await buffer.is_latest(msg.instance_name, msg.phone, msg.message_id):
+            return Response(status_code=200)
+
+        entries = await buffer.drain(msg.instance_name, msg.phone)
+        if not entries:
+            return Response(status_code=200)
+
+        combined = buffer.combine(msg, entries)
+        await core.process_message(combined, check_idempotency=False)
+        # Marca as bolhas como processadas SO apos o sucesso (retry-safe).
+        await buffer.mark_entries_processed(entries)
     except Exception:  # noqa: BLE001
-        log.exception("Erro no processamento — retry via Pub/Sub")
+        log.exception("Erro no processamento agrupado — retry via Pub/Sub")
         return Response(status_code=500)
 
     return Response(status_code=200)

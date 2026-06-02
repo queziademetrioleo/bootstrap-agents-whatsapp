@@ -68,11 +68,16 @@ async def _resolve_agent_config(instance_name: str) -> AgentConfig:
     )
 
 
-async def process_message(msg: InboundMessage) -> None:
+async def process_message(msg: InboundMessage, *, check_idempotency: bool = True) -> None:
+    """Processa um turno.
+
+    check_idempotency=False e usado pelo caminho de debounce (agent/buffer.py),
+    onde as bolhas individuais ja foram dedupadas antes de serem agrupadas.
+    """
     s = get_settings()
 
     # 1. Idempotencia — claim atomico (vence a corrida entre instancias).
-    if not await memory.mark_processed(msg.message_id):
+    if check_idempotency and not await memory.mark_processed(msg.message_id):
         log.info("Mensagem duplicada — descartada", extra={"fields": {"mid": msg.message_id}})
         return
 

@@ -51,6 +51,13 @@ class Settings(BaseSettings):
     rag_score_threshold: float = 0.75
     rag_top_k: int = 5
 
+    # --- Debounce / agrupamento de mensagens ---
+    # Janela de silencio (segundos) para agrupar mensagens quebradas em bolhas.
+    # 0 desabilita o agrupamento (processa cada mensagem na hora).
+    debounce_seconds: float = 8.0
+    # TTL do buffer no Redis (seguranca contra lixo orfao).
+    debounce_buffer_ttl_seconds: int = 300
+
     # --- Runtime ---
     default_agent_id: str = "default"
     max_tool_iterations: int = 6

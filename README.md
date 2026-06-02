@@ -61,6 +61,7 @@ docs/           guias passo a passo
 - **Adicionar uma integração:** [docs/adding-an-integration.md](docs/adding-an-integration.md)
 - **Atualizar a base de conhecimento (RAG):** [docs/updating-knowledge-base.md](docs/updating-knowledge-base.md)
 - **Criar um novo agente (cliente):** [docs/creating-a-new-agent.md](docs/creating-a-new-agent.md)
+- **Agrupar mensagens em bolhas (debounce):** [docs/message-debouncing.md](docs/message-debouncing.md)
 - **Deploy no GCP:** [docs/deploying.md](docs/deploying.md)
 
 ## Multitenancy
