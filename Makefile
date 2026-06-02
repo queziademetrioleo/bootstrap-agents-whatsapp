@@ -8,13 +8,13 @@ venv: ## Cria virtualenv com Python 3.13 e instala dependencias
 	python3.13 -m venv .venv && . .venv/bin/activate && pip install -U pip && pip install -r requirements.txt
 
 run: ## Sobe a API localmente (webhook + processador no mesmo app)
-	. .venv/bin/activate && uvicorn agent.app:app --reload --port 8080
+	. .venv/bin/activate && PYTHONPATH=. uvicorn agent.app:app --reload --port 8080
 
 db-schema: ## Aplica o schema no Postgres local (usa variaveis do .env)
 	psql "$$DATABASE_URL" -f scripts/init_db.sql
 
 ingest: ## Ingere a base de conhecimento. Uso: make ingest CSV=knowledge/default.csv AGENT=default
-	. .venv/bin/activate && python scripts/ingest.py --csv $(CSV) --agent-id $(AGENT)
+	. .venv/bin/activate && PYTHONPATH=. python scripts/ingest.py --csv $(CSV) --agent-id $(AGENT)
 
 lint: ## Roda o ruff
 	. .venv/bin/activate && ruff check .
