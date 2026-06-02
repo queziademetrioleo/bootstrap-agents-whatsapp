@@ -4,8 +4,8 @@ SHELL := /bin/bash
 help: ## Lista os comandos disponiveis
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-venv: ## Cria virtualenv e instala dependencias
-	python3 -m venv .venv && . .venv/bin/activate && pip install -U pip && pip install -r requirements.txt
+venv: ## Cria virtualenv com Python 3.13 e instala dependencias
+	python3.13 -m venv .venv && . .venv/bin/activate && pip install -U pip && pip install -r requirements.txt
 
 run: ## Sobe a API localmente (webhook + processador no mesmo app)
 	. .venv/bin/activate && uvicorn agent.app:app --reload --port 8080

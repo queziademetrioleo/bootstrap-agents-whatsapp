@@ -2,7 +2,13 @@
 
 ## Pré-requisitos
 
-- Python 3.11+
+- Python **3.13** — use `python3.13` explicitamente (o `pydantic-core` não suporta
+  3.14+). Verifique se está instalado: `python3.13 --version`.
+  - Mac: `brew install python@3.13`
+  - Linux: `sudo apt install python3.13` (Ubuntu 24.04+) ou via `deadsnakes`:
+    `sudo add-apt-repository ppa:deadsnakes/ppa && sudo apt install python3.13`
+  - Windows: baixe em [python.org](https://www.python.org/downloads/release/python-3130/)
+  - Conda: `conda create -n agent python=3.13 -y && conda activate agent`
 - Docker instalado e **rodando**:
   - **Mac / Windows** — Docker Desktop; abra o app antes de rodar qualquer `docker`
     no terminal (sem ele os comandos falham)
@@ -59,6 +65,14 @@ GCP_LOCATION=southamerica-east1
 ```bash
 make venv
 ```
+
+> Sem `make` (Windows)? Rode manualmente:
+> ```bash
+> python3.13 -m venv .venv
+> . .venv/bin/activate        # Mac/Linux
+> .venv\Scripts\activate      # Windows
+> pip install -r requirements.txt
+> ```
 
 ## 5. Criar o schema
 
