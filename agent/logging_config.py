@@ -47,9 +47,11 @@ def setup_logging() -> None:
     _configured = True
 
 
-def get_logger(name: str) -> logging.LoggerAdapter:
+def get_logger(name: str) -> logging.Logger:
     setup_logging()
-    return logging.LoggerAdapter(logging.getLogger(name), {})
+    # Logger direto (nao LoggerAdapter): o LoggerAdapter com extra={} substituiria
+    # o extra={"fields": ...} passado em cada chamada, descartando os campos.
+    return logging.getLogger(name)
 
 
 def mask_phone(phone: str | None) -> str:
