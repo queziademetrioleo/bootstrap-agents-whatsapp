@@ -8,6 +8,7 @@ locals {
     ENV                         = local.env
     GCP_PROJECT_ID              = var.project_id
     GCP_LOCATION                = var.region
+    GEMINI_MODEL                = var.gemini_model
     DB_INSTANCE_CONNECTION_NAME = google_sql_database_instance.agent.connection_name
     DB_NAME                     = google_sql_database.agent.name
     DB_USER                     = google_sql_user.agent.name

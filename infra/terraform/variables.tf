@@ -86,3 +86,9 @@ variable "model_armor_enabled" {
   default     = true
   description = "Cria o template do Model Armor e habilita a checagem no app."
 }
+
+variable "gemini_model" {
+  type        = string
+  default     = "gemini-2.5-flash"
+  description = "ID do modelo Gemini na Vertex AI. (gemini-3.5-flash nao existe — usar 2.5)."
+}
