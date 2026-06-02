@@ -1,3 +1,4 @@
+# Requer Python >=3.11, <3.14 (pydantic-core usa PyO3/Rust — sem suporte ao 3.14+)
 # --- Core runtime ---
 fastapi==0.115.6
 uvicorn[standard]==0.34.0

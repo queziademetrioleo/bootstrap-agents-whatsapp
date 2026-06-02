@@ -2,7 +2,7 @@
 name = "whatsapp-agent-bootstrap"
 version = "0.1.0"
 description = "Template bootstrap de agentes de IA no WhatsApp, gerenciado no GCP (Vertex AI + Cloud Run + Pub/Sub + Cloud SQL/PgVector)."
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 readme = "README.md"
 
 [tool.ruff]
