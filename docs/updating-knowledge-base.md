@@ -55,7 +55,10 @@ Cada agente tem `agent_id` próprio → bases isoladas no mesmo banco. Um CSV po
 agente: `knowledge/acme.csv` (`--agent-id acme`), `knowledge/loja2.csv`
 (`--agent-id loja2`), etc.
 
-## Dica de performance
+## Índice de similaridade
 
-Após uma ingestão grande, vale recriar o índice ivfflat (já criado em
-`init_db.sql`). Para bases muito grandes, considere aumentar `lists`.
+O `init_db.sql` cria um índice **HNSW** sobre a coluna `embedding`. Ele foi
+escolhido em vez do ivfflat porque mantém boa recall tanto em bases pequenas
+quanto grandes — o ivfflat com `lists` alto numa base pequena pode retornar zero
+resultados (listas vazias) e quebrar o RAG silenciosamente. O HNSW não exige
+ajuste de `lists`/`probes` e funciona bem desde as primeiras linhas.

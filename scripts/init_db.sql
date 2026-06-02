@@ -41,9 +41,11 @@ CREATE TABLE IF NOT EXISTS knowledge_base (
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (agent_id, pergunta)
 );
--- Indice de similaridade por cosseno. Criar/recriar apos popular a base.
+-- Indice de similaridade por cosseno (HNSW). Escolhido em vez de ivfflat porque
+-- da boa recall de poucas a muitas linhas — ivfflat com lists alto numa base
+-- pequena retorna 0 resultados (listas vazias), quebrando o RAG.
 CREATE INDEX IF NOT EXISTS idx_kb_embedding
-    ON knowledge_base USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+    ON knowledge_base USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS idx_kb_agent ON knowledge_base (agent_id);
 
 -- ------------------------------------------------------------ agent_configs --
