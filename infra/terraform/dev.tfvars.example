@@ -1,0 +1,15 @@
+# Copie para dev.tfvars e preencha. Use com: terraform workspace select dev
+project_id      = "meu-projeto-gcp"
+region          = "southamerica-east1"
+zone            = "southamerica-east1-a"
+db_password     = "TROQUE-POR-SENHA-FORTE"
+db_tier         = "db-f1-micro"
+redis_memory_gb = 1
+image_tag       = "dev-latest"
+
+# Opcional — trigger automatico do Cloud Build:
+# github_owner = "minha-org"
+# github_repo  = "whatsapp-agent-bootstrap"
+
+# Segredos de APIs externas a criar (preencher valores depois do apply):
+external_secrets = ["CRM_API_TOKEN"]

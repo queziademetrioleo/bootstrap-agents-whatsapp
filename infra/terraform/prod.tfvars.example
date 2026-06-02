@@ -1,0 +1,13 @@
+# Copie para prod.tfvars e preencha. Use com: terraform workspace select prod
+project_id      = "meu-projeto-gcp"
+region          = "southamerica-east1"
+zone            = "southamerica-east1-a"
+db_password     = "TROQUE-POR-SENHA-FORTE"
+db_tier         = "db-custom-1-3840" # mais robusto em prod
+redis_memory_gb = 1
+image_tag       = "prod-latest"
+
+# github_owner = "minha-org"
+# github_repo  = "whatsapp-agent-bootstrap"
+
+external_secrets = ["CRM_API_TOKEN"]

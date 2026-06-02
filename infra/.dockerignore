@@ -1,0 +1,13 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.git/
+.env
+.env.*
+infra/terraform/
+docs/
+knowledge/
+scripts/
+tests/
+*.md

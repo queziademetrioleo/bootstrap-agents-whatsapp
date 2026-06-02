@@ -1,0 +1,78 @@
+# CI/CD — build da imagem, push no Artifact Registry e deploy no Cloud Run.
+# Trigger: push para `main` -> deploy em DEV. Push para `release` -> deploy em PROD.
+# A substituicao _ENV controla o ambiente; o trigger define o valor.
+#
+# A SA do Cloud Build (CI/CD) precisa de: run.developer, artifactregistry.writer,
+# iam.serviceAccountUser (na SA do agente).
+
+substitutions:
+  _REGION: southamerica-east1
+  _REPO: agent-images
+  _ENV: dev
+  _SERVICE_WEBHOOK: agent-webhook
+  _SERVICE_PROCESSOR: agent-processor
+  _AGENT_SA: agent-sa
+
+steps:
+  # 1. Build
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - infra/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/agent:$SHORT_SHA
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/agent:${_ENV}-latest
+      - .
+
+  # 2. Push
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/agent
+
+  # 3. Deploy webhook receiver
+  - id: deploy-webhook
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_WEBHOOK}-${_ENV}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/agent:$SHORT_SHA
+      - --region=${_REGION}
+      - --service-account=${_AGENT_SA}@$PROJECT_ID.iam.gserviceaccount.com
+      - --no-allow-unauthenticated
+      - --vpc-egress=private-ranges-only
+      - --network=agent-vpc
+      - --subnet=agent-subnet
+      - --add-cloudsql-instances=$PROJECT_ID:${_REGION}:agent-db-${_ENV}
+      - --set-env-vars=ENV=${_ENV},GCP_PROJECT_ID=$PROJECT_ID,GCP_LOCATION=${_REGION}
+
+  # 4. Deploy processador (consumidor do Pub/Sub)
+  - id: deploy-processor
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_PROCESSOR}-${_ENV}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/agent:$SHORT_SHA
+      - --region=${_REGION}
+      - --service-account=${_AGENT_SA}@$PROJECT_ID.iam.gserviceaccount.com
+      - --no-allow-unauthenticated
+      - --vpc-egress=private-ranges-only
+      - --network=agent-vpc
+      - --subnet=agent-subnet
+      - --add-cloudsql-instances=$PROJECT_ID:${_REGION}:agent-db-${_ENV}
+      - --set-env-vars=ENV=${_ENV},GCP_PROJECT_ID=$PROJECT_ID,GCP_LOCATION=${_REGION}
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/agent:$SHORT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY

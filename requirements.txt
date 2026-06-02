@@ -1,0 +1,23 @@
+# --- Core runtime ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# --- Google / Vertex AI ---
+# Gen AI SDK (substitui o depreciado vertexai.generative_models)
+google-genai==1.9.0
+google-cloud-pubsub==2.27.1
+
+# --- Banco de dados (Cloud SQL + PgVector) ---
+# Cloud SQL Python Connector — conexao do Cloud Run sem Auth Proxy binario
+cloud-sql-python-connector[asyncpg]==1.16.0
+asyncpg==0.30.0
+pgvector==0.3.6
+
+# --- Redis (Memorystore) ---
+redis==5.2.1
+
+# --- HTTP client (integracoes externas) ---
+httpx==0.28.1
+tenacity==9.0.0
