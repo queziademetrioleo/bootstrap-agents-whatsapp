@@ -3,7 +3,8 @@
 ## Pré-requisitos
 
 - Python 3.11+
-- Docker (para Postgres+pgvector e Redis locais)
+- Docker Desktop instalado e **aberto/rodando** (no Mac: abra o app Docker Desktop
+  antes de rodar qualquer `docker` no terminal — sem ele os comandos falham)
 - `gcloud` autenticado com ADC: `gcloud auth application-default login`
   (necessário porque embeddings e LLM usam Vertex AI mesmo em local)
 
