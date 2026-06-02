@@ -20,7 +20,9 @@ cd bootstrap-agents-whatsapp
 
 ```bash
 docker run -d --name agent-pg -p 5432:5432 \
-  -e POSTGRES_USER=agent -e POSTGRES_PASSWORD=agent -e POSTGRES_DB=agent \
+  -e POSTGRES_USER=agent \
+  -e POSTGRES_PASSWORD=agent \
+  -e POSTGRES_DB=agent \
   pgvector/pgvector:pg15
 
 docker run -d --name agent-redis -p 6379:6379 redis:7
