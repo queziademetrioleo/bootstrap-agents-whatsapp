@@ -111,8 +111,14 @@ REDIS_HOST=127.0.0.1
 REDIS_PORT=6380
 GCP_PROJECT_ID=seu-projeto-gcp
 GCP_LOCATION=southamerica-east1
+GEMINI_MODEL=gemini-2.5-flash
 MODEL_ARMOR_ENABLED=false
+EVOLUTION_ECHO=true
 ```
+
+Com `EVOLUTION_ECHO=true`, o agente não tenta enviar a resposta para a Evolution
+API (inexistente em ambiente local); em vez disso, registra a resposta gerada nos
+logs. Isso permite validar todo o fluxo sem uma instância da Evolution.
 
 As portas 5433 (Postgres) e 6380 (Redis) são usadas no host para evitar conflito
 com instâncias nativas que costumam ocupar as portas padrão 5432 e 6379.
@@ -178,12 +184,18 @@ curl -s -X POST localhost:8080/pubsub/push \
   -d "{\"message\":{\"data\":\"$PAYLOAD\"}}"
 ```
 
-**Verificação:** os logs da aplicação registram as entradas `RAG retrieve` e
-`Turno concluido`.
+**Verificação:** os logs da aplicação registram `RAG retrieve`, a resposta gerada
+na entrada `[ECHO] resposta do agente` (com o campo `text`) e `Turno concluido`.
+A requisição retorna `200`.
 
-O envio final pela Evolution API falha em ambiente local, pois não há uma
-instância da Evolution em execução. Esse comportamento é esperado; as demais
-etapas (RAG, geração via Gemini e persistência) são concluídas normalmente.
+Com `EVOLUTION_ECHO=true`, a resposta é registrada nos logs em vez de enviada à
+Evolution. A resposta também é persistida na tabela `conversations`; para
+consultá-la diretamente:
+
+```bash
+docker exec -it agent-pg psql -U agent -d agent \
+  -c "SELECT role, content FROM conversations ORDER BY created_at DESC LIMIT 4;"
+```
 
 ## Solução de problemas
 

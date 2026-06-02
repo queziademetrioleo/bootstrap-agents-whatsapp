@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     # --- Evolution API ---
     evolution_base_url: str = "http://127.0.0.1:8080"
     evolution_api_key: str = ""
+    # Modo dev: nao chama a Evolution; apenas loga a resposta gerada e retorna.
+    # Util para testar localmente sem uma instancia da Evolution rodando.
+    evolution_echo: bool = False
     # Token estatico validado no header `x-webhook-token` do webhook da Evolution.
     # A Evolution e configurada para enviar esse header (config de webhook -> headers).
     webhook_token: str = ""

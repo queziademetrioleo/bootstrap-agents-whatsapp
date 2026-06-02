@@ -25,8 +25,17 @@ def _headers() -> dict[str, str]:
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=0.5, max=4), reraise=True)
 async def send_text(instance_name: str, phone: str, text: str) -> None:
-    """Envia uma mensagem de texto via Evolution API (endpoint sendText)."""
+    """Envia uma mensagem de texto via Evolution API (endpoint sendText).
+
+    Em modo echo (dev), nao chama a Evolution: apenas loga a resposta gerada.
+    """
     s = get_settings()
+    if s.evolution_echo:
+        log.info(
+            "[ECHO] resposta do agente",
+            extra={"fields": {"instance": instance_name, "phone": mask_phone(phone), "text": text}},
+        )
+        return
     url = f"{s.evolution_base_url}/message/sendText/{instance_name}"
     payload = {"number": phone, "text": text}
     async with httpx.AsyncClient(timeout=15) as client:
@@ -51,6 +60,8 @@ async def send_presence(
     e cosmetico e nao pode derrubar o processamento.
     """
     s = get_settings()
+    if s.evolution_echo:
+        return  # modo dev: nao ha Evolution para receber a presenca
     url = f"{s.evolution_base_url}/chat/sendPresence/{instance_name}"
     payload = {"number": phone, "delay": delay_ms, "presence": presence}
     try:
@@ -74,7 +85,7 @@ async def typing(instance_name: str, phone: str):
         await evolution.send_text(instance, phone, resposta)
     """
     s = get_settings()
-    if not s.typing_indicator:
+    if not s.typing_indicator or s.evolution_echo:
         yield
         return
 
