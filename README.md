@@ -67,6 +67,7 @@ docs/           guias passo a passo
 - **Atualizar a base de conhecimento (RAG):** [docs/updating-knowledge-base.md](docs/updating-knowledge-base.md)
 - **Criar um novo agente (cliente):** [docs/creating-a-new-agent.md](docs/creating-a-new-agent.md)
 - **Agrupar mensagens em bolhas (debounce):** [docs/message-debouncing.md](docs/message-debouncing.md)
+- **Follow-up / re-engajamento:** [docs/follow-ups.md](docs/follow-ups.md)
 - **Deploy no GCP:** [docs/deploying.md](docs/deploying.md)
 
 ## Multitenancy

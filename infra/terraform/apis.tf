@@ -9,6 +9,7 @@ locals {
     "secretmanager.googleapis.com",     # Secret Manager
     "artifactregistry.googleapis.com",  # Artifact Registry
     "cloudbuild.googleapis.com",        # Cloud Build
+    "cloudscheduler.googleapis.com",    # Cloud Scheduler (sweep de follow-ups)
     "compute.googleapis.com",           # Compute Engine + VPC
     "vpcaccess.googleapis.com",         # VPC connector
     "servicenetworking.googleapis.com", # Private services access (Cloud SQL/Redis)

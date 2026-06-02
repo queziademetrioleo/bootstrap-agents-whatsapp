@@ -62,3 +62,9 @@ variable "external_secrets" {
   default     = []
   description = "Nomes de segredos de APIs externas a criar no Secret Manager (ex.: CRM_API_TOKEN)."
 }
+
+variable "followup_sweep_schedule" {
+  type        = string
+  default     = "* * * * *"
+  description = "Cron do Cloud Scheduler para o sweep de follow-ups (default: a cada minuto)."
+}

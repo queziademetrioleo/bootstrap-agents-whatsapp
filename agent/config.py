@@ -64,6 +64,13 @@ class Settings(BaseSettings):
     # Tempo (ms) que cada pulso de presence dura; e re-emitido ate a resposta sair.
     typing_refresh_ms: int = 3000
 
+    # --- Follow-up (re-engajamento) ---
+    # A config por agente fica em agent_configs.config["followup"]. Aqui ficam
+    # apenas os parametros do mecanismo de sweep.
+    scheduler_sa_email: str = ""        # SA do Cloud Scheduler autorizada no sweep
+    followup_sweep_batch: int = 100     # quantas conversas reivindicar por sweep
+    followup_lease_minutes: int = 10    # backoff/lease ao reivindicar (anti corrida)
+
     # --- Runtime ---
     default_agent_id: str = "default"
     max_tool_iterations: int = 6

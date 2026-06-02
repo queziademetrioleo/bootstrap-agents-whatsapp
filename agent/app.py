@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, Request, Response
 
-from agent import buffer, core, db, pubsub_client, redis_client, security
+from agent import buffer, core, db, followup, pubsub_client, redis_client, security
 from agent.config import get_settings
 from agent.logging_config import get_logger
 from agent.models import InboundMessage
@@ -145,3 +145,19 @@ async def pubsub_push(
         return Response(status_code=500)
 
     return Response(status_code=200)
+
+
+# ------------------------------------------------ sweep de follow-ups (cron) --
+
+
+@app.post("/tasks/followups/sweep", response_model=None)
+async def followups_sweep(
+    authorization: str | None = Header(default=None),
+) -> Response | dict:
+    """Disparado pelo Cloud Scheduler (minuto a minuto) — varre os follow-ups
+    vencidos e os envia. Autenticado por OIDC (SA do Scheduler).
+    """
+    if not await security.verify_scheduler_oidc(authorization):
+        return Response(status_code=401)
+    sent = await followup.run_sweep()
+    return {"sent": sent}

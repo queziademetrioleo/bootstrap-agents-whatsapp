@@ -34,15 +34,13 @@ def verify_webhook_signature(raw_body: bytes, signature_header: str | None) -> b
     return hmac.compare_digest(expected, provided)
 
 
-async def verify_pubsub_oidc(authorization: str | None) -> bool:
-    """Valida o token OIDC do push do Pub/Sub.
+async def _verify_oidc(authorization: str | None, expected_email: str, audience: str) -> bool:
+    """Valida um token OIDC Bearer e confere o email da SA emissora.
 
-    Em producao o Cloud Run pode exigir invoker IAM (recomendado), tornando esta
-    checagem redundante mas defensiva. Se PUBSUB_PUSH_SA_EMAIL estiver vazio,
-    pula (dev).
+    Se `expected_email` estiver vazio, pula (dev). Em prod, o invoker IAM do
+    Cloud Run ja e a 1a barreira; esta checagem e defensiva.
     """
-    s = get_settings()
-    if not s.pubsub_push_sa_email:
+    if not expected_email:
         return True
     if not authorization or not authorization.lower().startswith("bearer "):
         return False
@@ -52,9 +50,21 @@ async def verify_pubsub_oidc(authorization: str | None) -> bool:
         from google.oauth2 import id_token
 
         claims = id_token.verify_oauth2_token(
-            token, g_requests.Request(), audience=s.pubsub_audience or None
+            token, g_requests.Request(), audience=audience or None
         )
-        return claims.get("email") == s.pubsub_push_sa_email and claims.get("email_verified", False)
+        return claims.get("email") == expected_email and claims.get("email_verified", False)
     except Exception as exc:  # noqa: BLE001
-        log.warning("Falha ao validar OIDC do Pub/Sub", extra={"fields": {"err": str(exc)}})
+        log.warning("Falha ao validar OIDC", extra={"fields": {"err": str(exc)}})
         return False
+
+
+async def verify_pubsub_oidc(authorization: str | None) -> bool:
+    """Valida o token OIDC do push do Pub/Sub (processador)."""
+    s = get_settings()
+    return await _verify_oidc(authorization, s.pubsub_push_sa_email, s.pubsub_audience)
+
+
+async def verify_scheduler_oidc(authorization: str | None) -> bool:
+    """Valida o token OIDC do Cloud Scheduler (sweep de follow-ups)."""
+    s = get_settings()
+    return await _verify_oidc(authorization, s.scheduler_sa_email, "")

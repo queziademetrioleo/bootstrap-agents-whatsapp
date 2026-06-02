@@ -58,6 +58,27 @@ CREATE TABLE IF NOT EXISTS agent_configs (
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ------------------------------------------------------ conversation_state --
+-- Estado por conversa (instance+phone) para a cadencia de follow-up.
+-- next_followup_at e pre-calculado: o sweep so faz WHERE next_followup_at <= now().
+CREATE TABLE IF NOT EXISTS conversation_state (
+    instance_name        TEXT NOT NULL,
+    phone                TEXT NOT NULL,
+    user_id              BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    agent_id             TEXT NOT NULL,
+    last_interaction_at  TIMESTAMPTZ NOT NULL DEFAULT now(),  -- ultima msg do usuario
+    followup_stage       INT NOT NULL DEFAULT 0,              -- proximo stage a enviar
+    next_followup_at     TIMESTAMPTZ,                         -- quando disparar (NULL = nada)
+    last_followup_at     TIMESTAMPTZ,
+    followup_paused      BOOLEAN NOT NULL DEFAULT false,
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (instance_name, phone)
+);
+-- Indice parcial: o sweep so olha linhas agendadas e nao pausadas.
+CREATE INDEX IF NOT EXISTS idx_convstate_due
+    ON conversation_state (next_followup_at)
+    WHERE next_followup_at IS NOT NULL AND NOT followup_paused;
+
 -- ------------------------------------------------------- processed_messages --
 -- Idempotencia: claim atomico de message_id (ON CONFLICT DO NOTHING).
 CREATE TABLE IF NOT EXISTS processed_messages (

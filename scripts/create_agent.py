@@ -52,12 +52,23 @@ def main() -> None:
     p.add_argument("--system-prompt", required=True, help="System prompt / persona")
     p.add_argument("--tools", nargs="*", default=[], help="Tools de dominio ativas (universais ja entram)")
     p.add_argument("--config", default="{}", help="JSON de configuracoes extras")
+    p.add_argument(
+        "--followup",
+        default=None,
+        help=(
+            'JSON do bloco de follow-up, ex.: '
+            "'{\"enabled\":true,\"stages\":[{\"after_minutes\":60,\"mode\":\"fixed\","
+            "\"message\":\"Ainda posso ajudar?\"},{\"after_minutes\":1440,\"mode\":\"summary\"}]}'"
+        ),
+    )
     args = p.parse_args()
 
+    config = json.loads(args.config)
+    if args.followup:
+        config["followup"] = json.loads(args.followup)
+
     asyncio.run(
-        upsert_agent(
-            args.instance, args.agent_id, args.system_prompt, args.tools, json.loads(args.config)
-        )
+        upsert_agent(args.instance, args.agent_id, args.system_prompt, args.tools, config)
     )
 
 

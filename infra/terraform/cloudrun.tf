@@ -15,6 +15,7 @@ locals {
     REDIS_PORT                  = tostring(google_redis_instance.agent.port)
     PUBSUB_TOPIC                = google_pubsub_topic.messages.name
     PUBSUB_PUSH_SA_EMAIL        = google_service_account.pubsub_invoker.email
+    SCHEDULER_SA_EMAIL          = google_service_account.scheduler_invoker.email
     EVOLUTION_BASE_URL          = "http://${google_compute_instance.evolution.network_interface[0].network_ip}:8080"
     USE_CLOUD_SQL               = "true"
   }

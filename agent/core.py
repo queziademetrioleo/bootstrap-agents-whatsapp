@@ -18,7 +18,7 @@ import json
 
 from google.genai import types
 
-from agent import evolution, memory, rag, redis_client
+from agent import evolution, followup, memory, rag, redis_client
 from agent.config import get_settings
 from agent.genai_client import get_client
 from agent.logging_config import get_logger
@@ -103,6 +103,10 @@ async def process_message(msg: InboundMessage, *, check_idempotency: bool = True
 
     # 7. Envio da resposta.
     await evolution.send_text(msg.instance_name, msg.phone, final_text)
+
+    # 8. (Re)agenda a cadencia de follow-up — o usuario respondeu, reseta o ciclo.
+    await followup.on_user_message(cfg, user.id, msg.instance_name, msg.phone)
+
     log.info(
         "Turno concluido",
         extra={"fields": {"agent_id": cfg.agent_id, "phone": msg.phone, "rag_hits": rag_hits}},
