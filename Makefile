@@ -14,10 +14,11 @@ dev-up: ## Sobe Postgres+Redis, espera ficar pronto, aplica schema e ingere a ba
 	@echo "🧹  Removendo containers antigos (se existirem)..."
 	@docker rm -f agent-pg agent-redis >/dev/null 2>&1 || true
 	@echo "🐘  Subindo Postgres (pgvector) e Redis..."
-	docker run -d --name agent-pg -p 5432:5432 \
+	@echo "    (portas 5433/6380 no host para nao colidir com Postgres/Redis nativos)"
+	docker run -d --name agent-pg -p 5433:5432 \
 	  -e POSTGRES_USER=agent -e POSTGRES_PASSWORD=agent -e POSTGRES_DB=agent \
 	  pgvector/pgvector:pg15
-	docker run -d --name agent-redis -p 6379:6379 redis:7
+	docker run -d --name agent-redis -p 6380:6379 redis:7
 	@echo "⏳  Aguardando o Postgres aceitar conexoes..."
 	@until docker exec agent-pg pg_isready -U agent >/dev/null 2>&1; do sleep 1; done
 	@echo "📐  Aplicando o schema..."

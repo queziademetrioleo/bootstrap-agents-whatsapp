@@ -103,15 +103,19 @@ Edite o arquivo `.env` com os valores do ambiente local:
 ```
 USE_CLOUD_SQL=false
 DB_HOST=127.0.0.1
-DB_PORT=5432
+DB_PORT=5433
 DB_USER=agent
 DB_PASSWORD=agent
 DB_NAME=agent
 REDIS_HOST=127.0.0.1
+REDIS_PORT=6380
 GCP_PROJECT_ID=seu-projeto-gcp
 GCP_LOCATION=southamerica-east1
 MODEL_ARMOR_ENABLED=false
 ```
+
+As portas 5433 (Postgres) e 6380 (Redis) são usadas no host para evitar conflito
+com instâncias nativas que costumam ocupar as portas padrão 5432 e 6379.
 
 **Verificação:** `grep USE_CLOUD_SQL .env` retorna `USE_CLOUD_SQL=false`.
 
@@ -141,10 +145,10 @@ A execução manual equivalente, caso prefira acompanhar cada etapa:
 ```bash
 docker rm -f agent-pg agent-redis 2>/dev/null || true
 
-docker run -d --name agent-pg -p 5432:5432 \
+docker run -d --name agent-pg -p 5433:5432 \
   -e POSTGRES_USER=agent -e POSTGRES_PASSWORD=agent -e POSTGRES_DB=agent \
   pgvector/pgvector:pg15
-docker run -d --name agent-redis -p 6379:6379 redis:7
+docker run -d --name agent-redis -p 6380:6379 redis:7
 
 until docker exec agent-pg pg_isready -U agent >/dev/null 2>&1; do sleep 1; done
 
@@ -190,7 +194,8 @@ etapas (RAG, geração via Gemini e persistência) são concluídas normalmente.
 | `ModuleNotFoundError: No module named 'agent'` | `PYTHONPATH` não definido | Use os comandos `make`, que já o definem, ou prefixe com `PYTHONPATH=.`. |
 | `ModuleNotFoundError: No module named 'asyncpg'` | Dependências instaladas no interpretador incorreto | Recrie o ambiente: `rm -rf .venv && make venv`. |
 | `Conflict. The container name "/agent-pg" is already in use` | Container anterior existente | `make dev-down` e tente novamente. |
-| `role "agent" does not exist` | Container criado sem as variáveis de ambiente ou schema não aplicado | `make dev-down && make dev-up`. |
+| `role "agent" does not exist` (no ingest, mas o schema aplicou) | Há um Postgres nativo ocupando a porta do host, interceptando a conexão | As portas locais são 5433/6380 justamente para evitar isso; confirme `DB_PORT=5433` e `REDIS_PORT=6380` no `.env` e rode `make dev-down && make dev-up`. |
+| `role "agent" does not exist` (schema não aplicou) | Container criado sem as variáveis de ambiente | `make dev-down && make dev-up`. |
 | `connection ... port 5432 failed: Connection refused` | Postgres ainda não disponível | `make dev-up` aguarda a disponibilidade automaticamente. |
 | `psql: command not found` | Cliente `psql` ausente | Não é necessário: `make db-schema` executa via `docker exec`. |
 | `Cannot connect to the Docker daemon` | Docker não está em execução | Inicie o Docker Desktop ou `sudo systemctl start docker`. |
