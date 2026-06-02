@@ -38,6 +38,11 @@ O **webhook receiver** só valida + publica no Pub/Sub e responde 200. O
 **processador** roda o loop do agente: idempotência → contexto → RAG automático →
 Gemini com function calling → persistência → resposta. Detalhes em `agent/core.py`.
 
+**UX de conversa:** mensagens quebradas em várias bolhas são agrupadas numa única
+resposta (debounce — ver [docs/message-debouncing.md](docs/message-debouncing.md))
+e o agente mostra **"digitando..."** enquanto gera a resposta (`TYPING_INDICATOR`,
+via `POST /chat/sendPresence` da Evolution; lógica em `agent/evolution.py:typing`).
+
 ## Estrutura
 
 ```

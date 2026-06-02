@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     # TTL do buffer no Redis (seguranca contra lixo orfao).
     debounce_buffer_ttl_seconds: int = 300
 
+    # --- Indicador "digitando..." (presence composing) ---
+    # Mostra "digitando..." no WhatsApp enquanto o agente gera a resposta.
+    typing_indicator: bool = True
+    # Tempo (ms) que cada pulso de presence dura; e re-emitido ate a resposta sair.
+    typing_refresh_ms: int = 3000
+
     # --- Runtime ---
     default_agent_id: str = "default"
     max_tool_iterations: int = 6

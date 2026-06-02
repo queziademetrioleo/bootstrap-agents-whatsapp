@@ -87,6 +87,35 @@ async def process_message(msg: InboundMessage, *, check_idempotency: bool = True
     user = await memory.get_or_create_user(msg.phone, msg.name)
     history = await redis_client.get_history(msg.instance_name, msg.phone)
 
+    # 3-5. RAG + geracao. Mostra "digitando..." enquanto processa (best-effort).
+    async with evolution.typing(msg.instance_name, msg.phone):
+        final_text, rag_hits = await _generate_reply(msg, cfg, user, history)
+
+    # 6. Persistencia do turno (curto + longo).
+    await redis_client.append_turns(
+        msg.instance_name,
+        msg.phone,
+        Turn(role="user", content=msg.text),
+        Turn(role="agent", content=final_text),
+    )
+    await memory.save_turn(user.id, "user", msg.text)
+    await memory.save_turn(user.id, "agent", final_text)
+
+    # 7. Envio da resposta.
+    await evolution.send_text(msg.instance_name, msg.phone, final_text)
+    log.info(
+        "Turno concluido",
+        extra={"fields": {"agent_id": cfg.agent_id, "phone": msg.phone, "rag_hits": rag_hits}},
+    )
+
+
+async def _generate_reply(msg, cfg, user, history) -> tuple[str, int]:
+    """RAG + loop de function calling. Retorna (texto_final, qtd_hits_rag).
+
+    Extraido de process_message para rodar dentro do indicador "digitando...".
+    """
+    s = get_settings()
+
     # 3. RAG automatico.
     hits = await rag.retrieve(msg.text, cfg.agent_id)
     rag_context = rag.format_context(hits)
@@ -156,22 +185,7 @@ async def process_message(msg: InboundMessage, *, check_idempotency: bool = True
     if not final_text:
         final_text = "Desculpe, nao entendi. Pode reformular?"
 
-    # 6. Persistencia do turno (curto + longo).
-    await redis_client.append_turns(
-        msg.instance_name,
-        msg.phone,
-        Turn(role="user", content=msg.text),
-        Turn(role="agent", content=final_text),
-    )
-    await memory.save_turn(user.id, "user", msg.text)
-    await memory.save_turn(user.id, "agent", final_text)
-
-    # 7. Envio da resposta.
-    await evolution.send_text(msg.instance_name, msg.phone, final_text)
-    log.info(
-        "Turno concluido",
-        extra={"fields": {"agent_id": cfg.agent_id, "phone": msg.phone, "rag_hits": len(hits)}},
-    )
+    return final_text, len(hits)
 
 
 def serialize_result(result) -> str:
