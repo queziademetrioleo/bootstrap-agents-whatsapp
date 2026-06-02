@@ -66,12 +66,28 @@ GCP_LOCATION=southamerica-east1
 make venv
 ```
 
-> Sem `make` (Windows)? Rode manualmente:
+O `make venv` faz três coisas em sequência: cria o `.venv` com Python 3.13,
+ativa ele e instala todas as dependências. **Não rode os passos separados** — se
+ativar o venv manualmente e depois rodar o `pip install` sem o `make`, o install
+pode ir pro interpretador errado (ex.: o Conda base) e os módulos não serão
+encontrados depois.
+
+> **Sem `make` (Windows ou preferência manual)?** Rode exatamente nesta ordem,
+> sem pular nenhum passo:
 > ```bash
 > python3.13 -m venv .venv
 > . .venv/bin/activate        # Mac/Linux
 > .venv\Scripts\activate      # Windows
 > pip install -r requirements.txt
+> ```
+> Confirme que o venv está ativo antes do `pip install` — o prompt deve mostrar
+> `(.venv)`. Se aparecer `(base)` do Conda junto, tudo bem, mas o `(.venv)` tem
+> que estar lá.
+
+> **Verificar se o install foi no lugar certo:**
+> ```bash
+> which python   # deve apontar para .venv/bin/python, não para o Conda
+> python -c "import asyncpg; print('ok')"   # testa uma dependencia
 > ```
 
 ## 5. Criar o schema
