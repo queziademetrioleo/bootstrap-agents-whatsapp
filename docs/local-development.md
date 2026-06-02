@@ -7,7 +7,16 @@
 - `gcloud` autenticado com ADC: `gcloud auth application-default login`
   (necessário porque embeddings e LLM usam Vertex AI mesmo em local)
 
-## 1. Subir Postgres (com pgvector) e Redis locais
+## 1. Clonar o repositório
+
+```bash
+git clone https://github.com/queziademetrioleo/bootstrap-agents-whatsapp.git
+cd bootstrap-agents-whatsapp
+```
+
+> Todos os comandos a seguir assumem que você está na raiz do repositório.
+
+## 2. Subir Postgres (com pgvector) e Redis locais
 
 ```bash
 docker run -d --name agent-pg -p 5432:5432 \
@@ -17,7 +26,7 @@ docker run -d --name agent-pg -p 5432:5432 \
 docker run -d --name agent-redis -p 6379:6379 redis:7
 ```
 
-## 2. Configurar o ambiente
+## 3. Configurar o ambiente
 
 ```bash
 cp .env.example .env
@@ -37,26 +46,26 @@ GCP_PROJECT_ID=seu-projeto-gcp     # precisa de Vertex AI habilitado
 GCP_LOCATION=southamerica-east1
 ```
 
-## 3. Instalar dependências
+## 4. Instalar dependências
 
 ```bash
 make venv
 ```
 
-## 4. Criar o schema
+## 5. Criar o schema
 
 ```bash
 . .venv/bin/activate
 psql "postgresql://agent:agent@127.0.0.1:5432/agent" -f scripts/init_db.sql
 ```
 
-## 5. Ingerir a base de conhecimento de exemplo
+## 6. Ingerir a base de conhecimento de exemplo
 
 ```bash
 make ingest CSV=knowledge/default.csv AGENT=default
 ```
 
-## 6. Rodar a API
+## 7. Rodar a API
 
 ```bash
 make run     # uvicorn em http://127.0.0.1:8080
@@ -64,7 +73,7 @@ make run     # uvicorn em http://127.0.0.1:8080
 
 Health check: `curl localhost:8080/healthz`
 
-## 7. Simular uma mensagem (sem Evolution/Pub/Sub)
+## 8. Simular uma mensagem (sem Evolution/Pub/Sub)
 
 Você pode testar o processador direto, montando o envelope do Pub/Sub:
 
