@@ -3,8 +3,13 @@
 ## Pré-requisitos
 
 - Python 3.11+
-- Docker Desktop instalado e **aberto/rodando** (no Mac: abra o app Docker Desktop
-  antes de rodar qualquer `docker` no terminal — sem ele os comandos falham)
+- Docker instalado e **rodando**:
+  - **Mac / Windows** — Docker Desktop; abra o app antes de rodar qualquer `docker`
+    no terminal (sem ele os comandos falham)
+  - **Linux** — Docker Engine via `apt`/`dnf`; verifique com
+    `sudo systemctl status docker` e inicie com `sudo systemctl start docker` se
+    necessário. Adicione seu usuário ao grupo `docker` pra não precisar de `sudo`:
+    `sudo usermod -aG docker $USER` (requer logout/login)
 - `gcloud` autenticado com ADC: `gcloud auth application-default login`
   (necessário porque embeddings e LLM usam Vertex AI mesmo em local)
 
