@@ -58,15 +58,19 @@ resource "google_compute_router_nat" "nat" {
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
-# Firewall: permitir entrada na porta 8080 (Evolution) — restrinja em prod.
-resource "google_compute_firewall" "evolution_ingress" {
-  name    = "${local.name}-evolution-ingress"
+# Firewall da VM da Evolution (P3).
+# A VM NAO precisa de inbound da internet para operar: o WhatsApp/Baileys e
+# outbound (via Cloud NAT) e o webhook vai da VM PARA o Cloud Run. As portas
+# abaixo sao so para ADMIN (manager UI 8080/3000, SSH 22) — restrinja a IPs
+# conhecidos via `admin_cidrs`. SSH idealmente via IAP (35.235.240.0/20).
+resource "google_compute_firewall" "evolution_admin" {
+  name    = "${local.name}-evolution-admin"
   network = google_compute_network.vpc.name
 
   allow {
     protocol = "tcp"
     ports    = ["8080", "3000", "22"]
   }
-  source_ranges = ["0.0.0.0/0"] # TODO: restringir a IPs conhecidos em prod
+  source_ranges = var.admin_cidrs
   target_tags   = ["evolution"]
 }

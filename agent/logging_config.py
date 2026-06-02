@@ -50,3 +50,11 @@ def setup_logging() -> None:
 def get_logger(name: str) -> logging.LoggerAdapter:
     setup_logging()
     return logging.LoggerAdapter(logging.getLogger(name), {})
+
+
+def mask_phone(phone: str | None) -> str:
+    """Mascara um telefone para log (PII): mantem so os 4 ultimos digitos."""
+    if not phone:
+        return "?"
+    tail = phone[-4:]
+    return f"***{tail}"

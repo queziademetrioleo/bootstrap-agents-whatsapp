@@ -20,9 +20,16 @@ curl -X POST $EVO/instance/create -H "apikey: $KEY" -H 'Content-Type: applicatio
 # parear o número (abre QR Code)
 curl $EVO/instance/connect/loja-acme -H "apikey: $KEY"
 
-# apontar o webhook desta instância para o Cloud Run
+# apontar o webhook desta instância para o Cloud Run.
+# IMPORTANTE: envie o header `x-webhook-token` com o token (output `webhook_token`
+# do Terraform) — o app rejeita (401) qualquer webhook sem o token correto.
 curl -X POST $EVO/webhook/set/loja-acme -H "apikey: $KEY" -H 'Content-Type: application/json' \
-  -d '{"url":"https://SEU_WEBHOOK_URL/webhook","enabled":true,"events":["MESSAGES_UPSERT","CONNECTION_UPDATE"]}'
+  -d '{
+    "url":"https://SEU_WEBHOOK_URL/webhook",
+    "enabled":true,
+    "events":["MESSAGES_UPSERT","CONNECTION_UPDATE"],
+    "headers":{"x-webhook-token":"SEU_WEBHOOK_TOKEN"}
+  }'
 ```
 
 > O `instanceName` (`loja-acme`) é a **identidade do agente** — ele chega no webhook

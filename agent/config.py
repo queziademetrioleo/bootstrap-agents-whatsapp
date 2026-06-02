@@ -45,7 +45,9 @@ class Settings(BaseSettings):
     # --- Evolution API ---
     evolution_base_url: str = "http://127.0.0.1:8080"
     evolution_api_key: str = ""
-    webhook_hmac_secret: str = ""
+    # Token estatico validado no header `x-webhook-token` do webhook da Evolution.
+    # A Evolution e configurada para enviar esse header (config de webhook -> headers).
+    webhook_token: str = ""
 
     # --- RAG ---
     rag_score_threshold: float = 0.75
@@ -64,12 +66,23 @@ class Settings(BaseSettings):
     # Tempo (ms) que cada pulso de presence dura; e re-emitido ate a resposta sair.
     typing_refresh_ms: int = 3000
 
+    # --- Guardrails (Google Model Armor) ---
+    model_armor_enabled: bool = False           # liga a checagem de prompt/resposta
+    model_armor_template: str = ""              # id do template do Model Armor
+    model_armor_check_response: bool = True     # rastrear tambem a resposta do modelo
+    model_armor_fail_open: bool = True          # erro da API -> segue (True) ou bloqueia (False)
+    # Mensagem enviada ao usuario quando um guardrail bloqueia.
+    guardrail_blocked_message: str = (
+        "Desculpe, nao posso ajudar com isso. Posso te ajudar com outra coisa?"
+    )
+
     # --- Follow-up (re-engajamento) ---
     # A config por agente fica em agent_configs.config["followup"]. Aqui ficam
     # apenas os parametros do mecanismo de sweep.
     scheduler_sa_email: str = ""        # SA do Cloud Scheduler autorizada no sweep
     followup_sweep_batch: int = 100     # quantas conversas reivindicar por sweep
     followup_lease_minutes: int = 10    # backoff/lease ao reivindicar (anti corrida)
+    processed_retention_days: int = 7   # idade maxima dos registros de idempotencia
 
     # --- Runtime ---
     default_agent_id: str = "default"

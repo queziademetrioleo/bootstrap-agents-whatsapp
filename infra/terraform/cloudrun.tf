@@ -18,7 +18,16 @@ locals {
     SCHEDULER_SA_EMAIL          = google_service_account.scheduler_invoker.email
     EVOLUTION_BASE_URL          = "http://${google_compute_instance.evolution.network_interface[0].network_ip}:8080"
     USE_CLOUD_SQL               = "true"
+    MODEL_ARMOR_ENABLED         = tostring(var.model_armor_enabled)
+    MODEL_ARMOR_TEMPLATE        = var.model_armor_enabled ? var.model_armor_template_id : ""
   }
+
+  # Segredos montados como env nos 2 servicos. Sempre inclui a senha do banco, o
+  # token do webhook (P1) e a API key da Evolution (P2); soma os externos.
+  secret_env_names = concat(
+    ["DB_PASSWORD", "EVOLUTION_API_KEY", "WEBHOOK_TOKEN"],
+    var.external_secrets,
+  )
 }
 
 # --- Webhook receiver ---
@@ -50,9 +59,9 @@ resource "google_cloud_run_v2_service" "webhook" {
         }
       }
 
-      # Segredos externos (Evolution API key, HMAC, etc) via Secret Manager.
+      # Segredos via Secret Manager (DB, token do webhook, Evolution, externos).
       dynamic "env" {
-        for_each = var.external_secrets
+        for_each = local.secret_env_names
         content {
           name = env.value
           value_source {
@@ -105,7 +114,7 @@ resource "google_cloud_run_v2_service" "processor" {
         }
       }
       dynamic "env" {
-        for_each = var.external_secrets
+        for_each = local.secret_env_names
         content {
           name = env.value
           value_source {
@@ -129,13 +138,12 @@ resource "google_cloud_run_v2_service" "processor" {
   depends_on = [google_project_iam_member.agent_roles]
 }
 
-# A Evolution (no Compute Engine) precisa chamar o webhook. Como o Cloud Run
-# exige autenticacao, conceda invoker a SA do agente (a VM usa essa identidade)
-# ou exponha o webhook com Cloud Run ingress + token. Para o template, o webhook
-# recebe ingress de toda a internet mas valida HMAC no app.
+# A Evolution (no Compute Engine) precisa chamar o webhook. O Cloud Run recebe
+# ingress publico, mas o app valida o token estatico do header `x-webhook-token`
+# (P1) em tempo constante — a Evolution e configurada para enviar esse header.
 resource "google_cloud_run_v2_service_iam_member" "webhook_public" {
   name     = google_cloud_run_v2_service.webhook.name
   location = var.region
   role     = "roles/run.invoker"
-  member   = "allUsers" # protegido por HMAC no app (agent/security.py)
+  member   = "allUsers" # protegido pelo token do webhook no app (agent/security.py)
 }

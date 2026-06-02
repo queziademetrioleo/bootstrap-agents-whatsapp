@@ -13,3 +13,10 @@ image_tag       = "dev-latest"
 
 # Segredos de APIs externas a criar (preencher valores depois do apply):
 external_secrets = ["CRM_API_TOKEN"]
+
+# Acesso admin a VM da Evolution (SSH/manager UI). 35.235.240.0/20 = IAP.
+# Adicione o SEU IP publico para acessar a manager UI, ex.: ["35.235.240.0/20", "203.0.113.5/32"]
+admin_cidrs = ["35.235.240.0/20"]
+
+# Guardrails (Model Armor)
+model_armor_enabled = true

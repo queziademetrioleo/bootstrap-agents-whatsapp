@@ -22,6 +22,12 @@ output "evolution_api_key" {
   sensitive   = true
 }
 
+output "webhook_token" {
+  description = "Token do webhook — configure na Evolution como header x-webhook-token."
+  value       = random_password.webhook_token.result
+  sensitive   = true
+}
+
 output "db_connection_name" {
   description = "Connection name do Cloud SQL (PROJECT:REGION:INSTANCE)."
   value       = google_sql_database_instance.agent.connection_name

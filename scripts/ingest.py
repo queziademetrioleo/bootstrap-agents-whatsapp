@@ -96,6 +96,9 @@ async def ingest(csv_path: Path, agent_id: str) -> None:
             agent_id, pergunta,
         )
 
+    # ANALYZE melhora o planner/recall do indice ivfflat apos mudancas em massa.
+    await db.execute("ANALYZE knowledge_base")
+
     log.info(
         "Ingestao concluida",
         extra={"fields": {

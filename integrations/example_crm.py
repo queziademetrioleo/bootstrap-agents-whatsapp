@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from urllib.parse import quote
 
 from integrations.base import HttpClient, secret
 from agent.tool_base import ToolContext
@@ -42,7 +43,8 @@ async def get_order(ctx: ToolContext, numero_pedido: str) -> dict | None:
             "_simulado": True,
         }
 
-    resp = await client.get(f"/orders/{numero_pedido}")
+    # quote() evita path traversal/SSRF se o numero vier com "/" ou ".." do modelo.
+    resp = await client.get(f"/orders/{quote(numero_pedido, safe='')}")
     if resp.status_code == 404:
         return None
     return resp.json()

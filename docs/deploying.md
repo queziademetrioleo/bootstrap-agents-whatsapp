@@ -114,11 +114,18 @@ start), Cloud SQL `REGIONAL` com backup + PITR e `deletion_protection`.
 
 ## Segurança — checklist
 
-- [ ] `WEBHOOK_HMAC_SECRET` setado (valida origem do webhook da Evolution).
-- [ ] Cloud SQL e Memorystore sem IP público (já é o default do Terraform).
-- [ ] Firewall da Evolution restrito a IPs conhecidos em prod (`network.tf`).
-- [ ] Segredos externos só no Secret Manager; credenciais GCP via IAM.
-- [ ] Push do Pub/Sub autenticado por OIDC + invoker IAM (já configurado).
+- [ ] **Webhook autenticado:** a Evolution envia o header `x-webhook-token` com o
+      valor do output `webhook_token` (o app rejeita 401 sem ele). Ver
+      `docs/creating-a-new-agent.md`.
+- [ ] **Guardrails (Model Armor)** habilitados em prod (`model_armor_enabled=true`)
+      — filtra prompt injection, jailbreak, conteúdo perigoso e URLs maliciosas.
+- [ ] **`admin_cidrs`** restrito (NÃO `0.0.0.0/0`) — SSH via IAP, manager UI só do
+      IP do time.
+- [ ] Cloud SQL e Memorystore sem IP público (default do Terraform).
+- [ ] Segredos (DB, Evolution, webhook, externos) só no Secret Manager; credenciais
+      GCP (Vertex, SQL, Model Armor) via IAM.
+- [ ] Push do Pub/Sub e Cloud Scheduler autenticados por OIDC + invoker IAM.
+- [ ] PII (telefone) mascarada nos logs.
 
 ## Custo aproximado (volume baixo/médio)
 

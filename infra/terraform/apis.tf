@@ -2,6 +2,7 @@
 locals {
   gcp_apis = [
     "aiplatform.googleapis.com",        # Vertex AI
+    "modelarmor.googleapis.com",        # Model Armor (guardrails de IA)
     "run.googleapis.com",               # Cloud Run
     "sqladmin.googleapis.com",          # Cloud SQL
     "redis.googleapis.com",             # Memorystore

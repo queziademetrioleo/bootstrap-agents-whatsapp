@@ -11,3 +11,9 @@ image_tag       = "prod-latest"
 # github_repo  = "whatsapp-agent-bootstrap"
 
 external_secrets = ["CRM_API_TOKEN"]
+
+# Acesso admin a VM da Evolution — RESTRINJA aos IPs do time + IAP em prod.
+admin_cidrs = ["35.235.240.0/20"]
+
+# Guardrails (Model Armor)
+model_armor_enabled = true

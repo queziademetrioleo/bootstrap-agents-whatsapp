@@ -68,3 +68,21 @@ variable "followup_sweep_schedule" {
   default     = "* * * * *"
   description = "Cron do Cloud Scheduler para o sweep de follow-ups (default: a cada minuto)."
 }
+
+variable "admin_cidrs" {
+  type        = list(string)
+  default     = ["35.235.240.0/20"] # IAP (SSH via tunel). Adicione seu IP para a UI.
+  description = "CIDRs com acesso admin a VM da Evolution (SSH/manager UI). NAO use 0.0.0.0/0 em prod."
+}
+
+variable "model_armor_template_id" {
+  type        = string
+  default     = "agent-guardrail"
+  description = "ID do template do Model Armor (guardrails de IA)."
+}
+
+variable "model_armor_enabled" {
+  type        = bool
+  default     = true
+  description = "Cria o template do Model Armor e habilita a checagem no app."
+}

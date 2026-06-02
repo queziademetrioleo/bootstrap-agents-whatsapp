@@ -51,15 +51,15 @@ async def healthz() -> dict[str, str]:
 @app.post("/webhook")
 async def webhook(
     request: Request,
-    x_hub_signature_256: str | None = Header(default=None),
+    x_webhook_token: str | None = Header(default=None),
 ) -> Response:
     """Recebe o evento da Evolution, valida, normaliza e publica no Pub/Sub.
 
     Responde 200 imediatamente — nunca processa de forma sincrona aqui.
     """
     raw = await request.body()
-    if not security.verify_webhook_signature(raw, x_hub_signature_256):
-        log.warning("Webhook com assinatura invalida — rejeitado")
+    if not security.verify_webhook_token(x_webhook_token):
+        log.warning("Webhook com token invalido — rejeitado")
         return Response(status_code=401)
 
     try:

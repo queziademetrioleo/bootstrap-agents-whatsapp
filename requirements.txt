@@ -8,6 +8,8 @@ pydantic-settings==2.7.1
 # Gen AI SDK (substitui o depreciado vertexai.generative_models)
 google-genai==1.9.0
 google-cloud-pubsub==2.27.1
+# Guardrails de IA (prompt injection, jailbreak, DLP, URLs maliciosas)
+google-cloud-modelarmor==0.6.0
 
 # --- Banco de dados (Cloud SQL + PgVector) ---
 # Cloud SQL Python Connector — conexao do Cloud Run sem Auth Proxy binario

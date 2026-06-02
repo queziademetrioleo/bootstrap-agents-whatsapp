@@ -67,6 +67,21 @@ python scripts/create_agent.py \
   --tools consultar_clima check_order_status
 ```
 
+## ⚠️ Segurança — não confie nos argumentos do modelo
+
+Os argumentos da tool são decididos pelo **modelo**, que pode ser manipulado pela
+mensagem do usuário (prompt injection). Portanto:
+
+- A **identidade confiável é `ctx.user`** (autenticada pelo número de WhatsApp),
+  **não** o que o modelo passa. Nunca aceite um `user_id`/`telefone`/`cpf` vindo
+  como argumento da tool para decidir de quem é o dado — use `ctx.user`.
+- Em operações **sensíveis** (pagamento, troca de cadastro, exclusão), valide
+  regras de negócio na tool e considere exigir confirmação explícita.
+- O **Model Armor** (guardrails) já filtra prompt injection/jailbreak na entrada,
+  mas é defesa em profundidade — a tool ainda deve ser segura por si.
+- Faça `quote()` em valores do modelo usados em path de URL (ver
+  `integrations/example_crm.py`).
+
 ## Testando
 
 Rode o app local (`make run`) e dispare uma mensagem que acione a tool (veja

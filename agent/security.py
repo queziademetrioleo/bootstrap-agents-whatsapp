@@ -1,17 +1,16 @@
 """Validacao de autenticidade das requisicoes de entrada.
 
-1) Webhook da Evolution -> HMAC SHA-256 do corpo cru, comparado em tempo
-   constante com o header `x-hub-signature-256` (`sha256=...`). Se
-   WEBHOOK_HMAC_SECRET estiver vazio, a verificacao e pulada (apenas dev).
+1) Webhook da Evolution -> token estatico no header `x-webhook-token`, comparado
+   em tempo constante. A Evolution e configurada para enviar esse header (config
+   de webhook -> headers). Se WEBHOOK_TOKEN estiver vazio, a verificacao e pulada
+   (apenas dev). Escolha pragmatica: a Evolution nao assina o corpo (HMAC), entao
+   um token compartilhado e a forma simples e efetiva de autenticar a origem.
 
-2) Push do Pub/Sub -> token OIDC no header Authorization, validado contra a SA
-   autorizada (PUBSUB_PUSH_SA_EMAIL). Garante que so o Pub/Sub invoca o
-   processador.
+2) Push do Pub/Sub e Cloud Scheduler -> token OIDC, validado contra a SA emissora.
 """
 
 from __future__ import annotations
 
-import hashlib
 import hmac
 
 from agent.config import get_settings
@@ -20,18 +19,16 @@ from agent.logging_config import get_logger
 log = get_logger(__name__)
 
 
-def verify_webhook_signature(raw_body: bytes, signature_header: str | None) -> bool:
+def verify_webhook_token(token_header: str | None) -> bool:
+    """Confere o token do webhook (header `x-webhook-token`) em tempo constante."""
     s = get_settings()
-    if not s.webhook_hmac_secret:
-        log.warning("WEBHOOK_HMAC_SECRET vazio — verificacao HMAC desabilitada (use so em dev)")
+    if not s.webhook_token:
+        log.warning("WEBHOOK_TOKEN vazio — verificacao do webhook desabilitada (use so em dev)")
         return True
-    if not signature_header:
+    if not token_header:
         return False
-    expected = hmac.new(
-        s.webhook_hmac_secret.encode(), raw_body, hashlib.sha256
-    ).hexdigest()
-    provided = signature_header.removeprefix("sha256=")
-    return hmac.compare_digest(expected, provided)
+    provided = token_header.removeprefix("Bearer ").strip()
+    return hmac.compare_digest(s.webhook_token, provided)
 
 
 async def _verify_oidc(authorization: str | None, expected_email: str, audience: str) -> bool:

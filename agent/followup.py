@@ -111,8 +111,12 @@ RETURNING cs.instance_name, cs.phone, cs.user_id, cs.agent_id, cs.followup_stage
 
 
 async def run_sweep() -> int:
-    """Dispara os follow-ups vencidos. Retorna quantos foram enviados."""
+    """Dispara os follow-ups vencidos. Retorna quantos foram enviados.
+
+    Tambem aproveita a passada para limpar idempotencia antiga (housekeeping).
+    """
     s = get_settings()
+    await memory.cleanup_processed(s.processed_retention_days)
     rows = await db.fetch(_CLAIM_SQL, s.followup_sweep_batch, s.followup_lease_minutes)
     sent = 0
     for r in rows:

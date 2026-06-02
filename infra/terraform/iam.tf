@@ -9,6 +9,7 @@ resource "google_service_account" "agent" {
 locals {
   agent_roles = [
     "roles/aiplatform.user",              # Vertex AI (Gemini + embeddings)
+    "roles/modelarmor.user",              # Guardrails (sanitize prompt/response)
     "roles/cloudsql.client",              # Cloud SQL via Connector
     "roles/pubsub.publisher",             # publicar (webhook receiver)
     "roles/pubsub.subscriber",            # consumir (processador)

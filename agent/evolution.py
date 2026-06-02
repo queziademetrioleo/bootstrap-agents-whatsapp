@@ -14,7 +14,7 @@ import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from agent.config import get_settings
-from agent.logging_config import get_logger
+from agent.logging_config import get_logger, mask_phone
 
 log = get_logger(__name__)
 
@@ -32,7 +32,10 @@ async def send_text(instance_name: str, phone: str, text: str) -> None:
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.post(url, json=payload, headers=_headers())
         resp.raise_for_status()
-    log.info("Resposta enviada", extra={"fields": {"instance": instance_name, "phone": phone}})
+    log.info(
+        "Resposta enviada",
+        extra={"fields": {"instance": instance_name, "phone": mask_phone(phone)}},
+    )
 
 
 async def send_presence(

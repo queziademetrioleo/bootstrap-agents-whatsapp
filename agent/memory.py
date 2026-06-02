@@ -29,6 +29,14 @@ async def mark_processed(message_id: str) -> bool:
     return result.endswith("1")
 
 
+async def cleanup_processed(older_than_days: int) -> None:
+    """Remove registros de idempotencia antigos (evita crescimento sem fim)."""
+    await db.execute(
+        "DELETE FROM processed_messages WHERE processed_at < now() - make_interval(days => $1)",
+        older_than_days,
+    )
+
+
 # ---------------------------------------------------------------------- users --
 
 
