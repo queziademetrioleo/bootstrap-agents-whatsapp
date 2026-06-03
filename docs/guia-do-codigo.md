@@ -66,8 +66,6 @@ banco, sem roteamento — este clone serve um cliente.
 
 ```yaml
 # config/agent.yaml
-instance_name: default        # nome da instância na Evolution (o número do cliente)
-
 system_prompt: |              # a persona / instruções do agente
   Voce e a atendente da Clinica X. Responda em portugues...
 
@@ -82,10 +80,13 @@ followup:                     # re-engajamento (opcional)
 
 | Campo | O que é |
 |-------|---------|
-| `instance_name` | nome da instância da Evolution (o número de WhatsApp deste cliente). |
 | `system_prompt` | a persona/instruções do agente. |
 | `tools_enabled` | tools de domínio/integração ativas (as universais entram sozinhas). |
 | `followup` | cadência de re-engajamento (ver seção 7). |
+
+> O nome da instância na Evolution é **fixo `default`** em todo repo (não é mais
+> um campo do YAML). Ao parear o WhatsApp, crie a instância com o nome `default`.
+> Se precisar de outro nome, use a variável de ambiente `EVOLUTION_INSTANCE`.
 
 Editou? Em local, reinicie o `make run`. Em produção, um novo deploy publica a
 config (ela é empacotada na imagem). Roteiro completo:

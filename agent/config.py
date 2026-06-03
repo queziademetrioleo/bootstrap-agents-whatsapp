@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     # --- Evolution API ---
     evolution_base_url: str = "http://127.0.0.1:8080"
     evolution_api_key: str = ""
+    # Single-tenant: o nome da instancia na Evolution e fixo "default" por repo.
+    # So mude (via env) se realmente precisar de outro nome.
+    evolution_instance: str = "default"
     # Modo dev: nao chama a Evolution; apenas loga a resposta gerada e retorna.
     # Util para testar localmente sem uma instancia da Evolution rodando.
     evolution_echo: bool = False

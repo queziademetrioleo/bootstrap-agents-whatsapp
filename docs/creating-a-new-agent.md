@@ -12,8 +12,6 @@ Não há tabela de agentes nem roteamento — este clone serve um único cliente
 Abra [`config/agent.yaml`](../config/agent.yaml) e defina o agente:
 
 ```yaml
-instance_name: clinica-x        # nome da instância na Evolution (o número do cliente)
-
 system_prompt: |
   Voce e a atendente virtual da Clinica X. Responda em portugues, de forma
   cordial e objetiva. Use a base de conhecimento e nao invente informacoes.
@@ -24,6 +22,9 @@ tools_enabled:
 followup:
   enabled: false                # ou true + stages (ver follow-ups.md)
 ```
+
+> O nome da instância na Evolution é fixo `default` (não vai no YAML). Se algum dia
+> precisar de outro nome, defina a variável de ambiente `EVOLUTION_INSTANCE`.
 
 ## 2. Montar a base de conhecimento (FAQ)
 
@@ -39,7 +40,7 @@ Detalhes: [updating-knowledge-base.md](updating-knowledge-base.md).
 ## 3. Criar a instância na Evolution (parear o número)
 
 Após o deploy (ver [deploy-gcp.md](deploy-gcp.md)), a Evolution está rodando na VM.
-Crie a instância com o **mesmo `instance_name`** do `agent.yaml` e pareie o número:
+Crie a instância com o nome **`default`** e pareie o número:
 
 ```bash
 EVO=http://EVOLUTION_IP:8080
@@ -47,15 +48,15 @@ KEY=$(terraform -chdir=infra/terraform output -raw evolution_api_key)
 TOKEN=$(terraform -chdir=infra/terraform output -raw webhook_token)
 WEBHOOK=$(terraform -chdir=infra/terraform output -raw webhook_url)
 
-# criar a instância
+# criar a instância (nome fixo: default)
 curl -X POST $EVO/instance/create -H "apikey: $KEY" -H 'Content-Type: application/json' \
-  -d '{"instanceName":"clinica-x","integration":"WHATSAPP-BAILEYS"}'
+  -d '{"instanceName":"default","integration":"WHATSAPP-BAILEYS"}'
 
 # parear o número (retorna o QR Code)
-curl $EVO/instance/connect/clinica-x -H "apikey: $KEY"
+curl $EVO/instance/connect/default -H "apikey: $KEY"
 
 # apontar o webhook para o Cloud Run, COM o token de autenticação
-curl -X POST $EVO/webhook/set/clinica-x -H "apikey: $KEY" -H 'Content-Type: application/json' \
+curl -X POST $EVO/webhook/set/default -H "apikey: $KEY" -H 'Content-Type: application/json' \
   -d "{\"url\":\"$WEBHOOK\",\"enabled\":true,\"events\":[\"MESSAGES_UPSERT\",\"CONNECTION_UPDATE\"],\"headers\":{\"x-webhook-token\":\"$TOKEN\"}}"
 ```
 

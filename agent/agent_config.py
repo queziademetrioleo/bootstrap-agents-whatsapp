@@ -19,17 +19,19 @@ from agent.models import AgentConfig
 
 @lru_cache
 def load_agent_config() -> AgentConfig:
-    path = Path(get_settings().agent_config_path)
+    s = get_settings()
+    path = Path(s.agent_config_path)
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
-    instance_name = data.get("instance_name", "default")
     system_prompt = (data.get("system_prompt") or "").strip()
     if not system_prompt:
         raise ValueError(f"system_prompt vazio em {path}")
 
+    # Single-tenant: o nome da instancia e fixo (settings.evolution_instance,
+    # default "default"), nao um campo do YAML.
     return AgentConfig(
-        instance_name=instance_name,
-        agent_id=data.get("agent_id", instance_name),
+        instance_name=s.evolution_instance,
+        agent_id=s.evolution_instance,
         system_prompt=system_prompt,
         tools_enabled=list(data.get("tools_enabled") or []),
         config={"followup": data.get("followup") or {}},

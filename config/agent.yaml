@@ -2,10 +2,10 @@
 # Configuracao do agente DESTE cliente.
 # 1 repositorio = 1 cliente = 1 deploy. Edite este arquivo para definir a
 # persona, as tools ativas e a cadencia de follow-up do agente.
+#
+# O nome da instancia na Evolution e fixo "default" (todo repo usa o mesmo).
+# Ao parear o WhatsApp, crie a instancia com o nome "default".
 # =============================================================================
-
-# Nome da instancia na Evolution (o numero de WhatsApp deste cliente).
-instance_name: default
 
 # Persona / instrucoes do agente. Use | para texto de varias linhas.
 system_prompt: |
