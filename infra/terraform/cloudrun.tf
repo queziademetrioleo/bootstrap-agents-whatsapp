@@ -18,6 +18,7 @@ locals {
     PUBSUB_PUSH_SA_EMAIL        = google_service_account.pubsub_invoker.email
     SCHEDULER_SA_EMAIL          = google_service_account.scheduler_invoker.email
     EVOLUTION_BASE_URL          = "http://${google_compute_instance.evolution.network_interface[0].network_ip}:8080"
+    EVOLUTION_INSTANCE          = "default" # single-tenant: instancia WhatsApp fixa por repo
     USE_CLOUD_SQL               = "true"
     MODEL_ARMOR_ENABLED         = tostring(var.model_armor_enabled)
     MODEL_ARMOR_TEMPLATE        = var.model_armor_enabled ? var.model_armor_template_id : ""
