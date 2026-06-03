@@ -1,0 +1,28 @@
+# Build-only: builda e publica a imagem do agente no Artifact Registry.
+# Usado no 1o deploy, ANTES do Cloud Run existir (resolve o chicken-and-egg:
+# os servicos Cloud Run referenciam a imagem, que precisa existir primeiro).
+#
+# Uso:
+#   gcloud builds submit --config infra/cloudbuild-image.yaml \
+#     --substitutions=_REGION=southamerica-east1,_REPO=agent-images,_TAG=dev-latest .
+
+substitutions:
+  _REGION: southamerica-east1
+  _REPO: agent-images
+  _TAG: dev-latest
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - infra/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/agent:${_TAG}
+      - .
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/agent:${_TAG}
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -35,9 +35,9 @@ provider "google-beta" {
 
 # Sufixo de ambiente vem do workspace do Terraform (dev | prod).
 locals {
-  env             = terraform.workspace == "default" ? "dev" : terraform.workspace
-  name            = "agent"
-  is_prod         = local.env == "prod"
-  min_instances   = local.is_prod ? 1 : 0
-  db_backup       = local.is_prod
+  env           = terraform.workspace == "default" ? "dev" : terraform.workspace
+  name          = "agent"
+  is_prod       = local.env == "prod"
+  min_instances = local.is_prod ? 1 : 0
+  db_backup     = local.is_prod
 }

@@ -24,8 +24,10 @@ cd /opt/evolution
 
 # Le valores dos metadados da instancia.
 API_KEY="$(curl -s -H 'Metadata-Flavor: Google' 'http://metadata.google.internal/computeMetadata/v1/instance/attributes/evolution-api-key')"
-WEBHOOK_URL="$(curl -s -H 'Metadata-Flavor: Google' 'http://metadata.google.internal/computeMetadata/v1/instance/attributes/webhook-url')"
 
+# O webhook NAO e definido aqui (seria um ciclo com o Cloud Run). Configure-o
+# por instancia, apos o deploy, via API: POST /webhook/set/{instance} com a URL
+# do Cloud Run e o header x-webhook-token (ver docs/creating-a-new-agent.md).
 cat > .env <<EOF
 SERVER_URL=http://0.0.0.0:8080
 AUTHENTICATION_TYPE=apikey
@@ -37,11 +39,6 @@ DATABASE_ENABLED=true
 
 CACHE_REDIS_ENABLED=true
 CACHE_REDIS_URI=redis://evolution_redis:6379
-
-WEBHOOK_GLOBAL_URL=${WEBHOOK_URL}
-WEBHOOK_GLOBAL_ENABLED=true
-WEBHOOK_EVENTS_MESSAGES_UPSERT=true
-WEBHOOK_EVENTS_CONNECTION_UPDATE=true
 EOF
 
 cat > docker-compose.yaml <<'EOF'

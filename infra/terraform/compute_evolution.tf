@@ -37,9 +37,12 @@ resource "google_compute_instance" "evolution" {
     access_config {} # IP publico efemero para receber conexoes do WhatsApp
   }
 
+  # Nota: o webhook NAO e configurado aqui (evitar ciclo VM <-> Cloud Run).
+  # Ele e definido por instancia, apos o deploy, via API da Evolution
+  # (POST /webhook/set/{instance} com o header x-webhook-token) — ver
+  # docs/creating-a-new-agent.md.
   metadata = {
     evolution-api-key = random_password.evolution_api_key.result
-    webhook-url       = "${google_cloud_run_v2_service.webhook.uri}/webhook"
   }
 
   metadata_startup_script = file("${path.module}/evolution_startup.sh")
