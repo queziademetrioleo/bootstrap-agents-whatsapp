@@ -61,14 +61,22 @@ docs/           guias passo a passo
 
 ## Começando
 
+**Comece por aqui — dois guias completos:**
+
+- 📘 **[Guia do Código](docs/guia-do-codigo.md)** — onde fica o quê, como criar
+  tools, integrações e a base de FAQ. Para quem vai configurar/estender o agente.
+- 🚀 **[Guia de Deploy GCP](docs/deploy-gcp.md)** — passo a passo sequencial para
+  subir tudo no GCP via CLI/Terraform.
+
+Guias detalhados por tópico:
+
 - **Rodar local:** [docs/local-development.md](docs/local-development.md)
+- **Criar um novo agente (cliente):** [docs/creating-a-new-agent.md](docs/creating-a-new-agent.md)
 - **Adicionar uma tool:** [docs/adding-a-tool.md](docs/adding-a-tool.md)
 - **Adicionar uma integração:** [docs/adding-an-integration.md](docs/adding-an-integration.md)
 - **Atualizar a base de conhecimento (RAG):** [docs/updating-knowledge-base.md](docs/updating-knowledge-base.md)
-- **Criar um novo agente (cliente):** [docs/creating-a-new-agent.md](docs/creating-a-new-agent.md)
 - **Agrupar mensagens em bolhas (debounce):** [docs/message-debouncing.md](docs/message-debouncing.md)
 - **Follow-up / re-engajamento:** [docs/follow-ups.md](docs/follow-ups.md)
-- **Deploy no GCP:** [docs/deploying.md](docs/deploying.md)
 
 ## Multitenancy
 
