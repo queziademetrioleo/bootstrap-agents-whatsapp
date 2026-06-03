@@ -79,7 +79,7 @@ chega no webhook. Sem novo repositório, sem novo serviço.
 
 ## Nota sobre o modelo
 
-O ID do modelo (`GEMINI_MODEL`) é configurável via env. O valor padrão segue o plano
-(`gemini-3.5-flash`). Se a Vertex AI retornar `NOT_FOUND` para esse ID na sua região,
-troque para um ID válido (ex.: `gemini-2.5-flash`) — só essa linha, nada no código
-está chumbado no nome do modelo.
+O sistema usa **`gemini-2.5-flash`** (via Vertex AI) em todo o pipeline — geração e
+function calling. O ID é configurável pela variável `GEMINI_MODEL` (env do Cloud Run,
+controlada pela variável Terraform `gemini_model`); para trocar de modelo, basta
+alterar esse valor — nada no código fica chumbado no nome.

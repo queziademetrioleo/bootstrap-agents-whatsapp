@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # --- GCP / Vertex AI ---
     gcp_project_id: str = "local-project"
     gcp_location: str = "southamerica-east1"
-    gemini_model: str = "gemini-3.5-flash"
+    gemini_model: str = "gemini-2.5-flash"
     embedding_model: str = "text-embedding-004"
     embedding_dim: int = 768
 

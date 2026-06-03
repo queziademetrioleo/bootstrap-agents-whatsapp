@@ -90,5 +90,5 @@ variable "model_armor_enabled" {
 variable "gemini_model" {
   type        = string
   default     = "gemini-2.5-flash"
-  description = "ID do modelo Gemini na Vertex AI. (gemini-3.5-flash nao existe — usar 2.5)."
+  description = "ID do modelo Gemini na Vertex AI usado em todo o sistema."
 }
