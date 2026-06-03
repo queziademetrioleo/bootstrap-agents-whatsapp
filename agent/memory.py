@@ -1,5 +1,6 @@
-"""Memoria longa e persistencia no Postgres: usuarios, conversas, idempotencia,
-configuracao de agente. A sessao curta (Redis) vive em agent/redis_client.py.
+"""Memoria longa e persistencia no Postgres: usuarios, conversas, idempotencia.
+A sessao curta (Redis) vive em agent/redis_client.py. A config do agente
+(single-tenant) vive em agent/agent_config.py (le config/agent.yaml).
 """
 
 from __future__ import annotations
@@ -7,7 +8,7 @@ from __future__ import annotations
 import json
 
 from agent import db
-from agent.models import AgentConfig, Turn, UserProfile
+from agent.models import Turn, UserProfile
 
 # --------------------------------------------------------------- idempotencia --
 
@@ -91,25 +92,3 @@ async def recent_long_history(user_id: int, limit: int = 20) -> list[Turn]:
         limit,
     )
     return [Turn(role=r["role"], content=r["content"]) for r in reversed(rows)]
-
-
-# ------------------------------------------------------------- agent_configs --
-
-
-async def get_agent_config(instance_name: str) -> AgentConfig | None:
-    row = await db.fetchrow(
-        "SELECT * FROM agent_configs WHERE instance_name = $1", instance_name
-    )
-    if row is None:
-        return None
-    config = row["config"]
-    if isinstance(config, str):
-        config = json.loads(config)
-    return AgentConfig(
-        id=row["id"],
-        instance_name=row["instance_name"],
-        system_prompt=row["system_prompt"],
-        tools_enabled=list(row["tools_enabled"] or []),
-        config=config or {},
-        agent_id=row["agent_id"],
-    )

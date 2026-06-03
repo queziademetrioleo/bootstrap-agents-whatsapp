@@ -11,10 +11,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Codigo. Inclui agent/ (core), tools/, integrations/ (auto-discovery em runtime).
+# Codigo. Inclui agent/ (core), tools/, integrations/ (auto-discovery em runtime)
+# e config/agent.yaml (a config single-tenant deste cliente).
 COPY agent/ ./agent/
 COPY tools/ ./tools/
 COPY integrations/ ./integrations/
+COPY config/ ./config/
 
 # Cloud Run injeta PORT. uvicorn escuta nela.
 ENV PORT=8080

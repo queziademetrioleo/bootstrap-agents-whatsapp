@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Pipeline de ingestao do RAG.
+"""Pipeline de ingestao do RAG (single-tenant: uma unica base por deploy).
 
-Le um CSV (colunas `Pergunta`, `Resposta`) e faz upsert na knowledge_base para
-um `agent_id`. Estrategia de sincronizacao (zero downtime):
+Le um CSV (colunas `Pergunta`, `Resposta`) e faz upsert na knowledge_base.
+Estrategia de sincronizacao (zero downtime):
 
   - linha NOVA            -> gera embedding da Pergunta e insere
   - Resposta ALTERADA     -> atualiza a resposta (Pergunta = chave, embedding mantido)
   - Pergunta ALTERADA     -> conta como nova (embedding regenerado); a antiga vira "removida"
-  - linha REMOVIDA do CSV -> deletada do banco (somente as deste source_file/agente)
+  - linha REMOVIDA do CSV -> deletada do banco
 
 So embeda a Pergunta (busca por similaridade de intencao), nunca a Resposta.
 
 Uso:
-    python scripts/ingest.py --csv knowledge/default.csv --agent-id default
+    python scripts/ingest.py --csv knowledge/default.csv
 """
 
 from __future__ import annotations
@@ -20,7 +20,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import csv
-import os
 from pathlib import Path
 
 from agent import db
@@ -45,14 +44,15 @@ def _read_csv(path: Path) -> list[tuple[str, str]]:
     return rows
 
 
-async def ingest(csv_path: Path, agent_id: str) -> None:
+async def ingest(csv_path: Path) -> None:
     source_file = csv_path.name
     rows = _read_csv(csv_path)
-    log.info("CSV lido", extra={"fields": {"linhas": len(rows), "agent_id": agent_id}})
+    log.info("CSV lido", extra={"fields": {"linhas": len(rows)}})
 
-    # Estado atual no banco para este agente.
+    # Estado atual no banco para ESTE arquivo (sync escopado por source_file —
+    # permite dividir o FAQ em varios CSVs sem um apagar o do outro).
     existing = await db.fetch(
-        "SELECT pergunta, resposta FROM knowledge_base WHERE agent_id = $1", agent_id
+        "SELECT pergunta, resposta FROM knowledge_base WHERE source_file = $1", source_file
     )
     existing_map = {r["pergunta"]: r["resposta"] for r in existing}
     csv_perguntas = {p for p, _ in rows}
@@ -73,30 +73,27 @@ async def ingest(csv_path: Path, agent_id: str) -> None:
         embeddings = embed_batch([p for p, _ in to_embed], task_type="RETRIEVAL_DOCUMENT")
         for (pergunta, resposta), emb in zip(to_embed, embeddings, strict=True):
             await db.execute(
-                """INSERT INTO knowledge_base (agent_id, pergunta, resposta, embedding, source_file)
-                   VALUES ($1, $2, $3, $4, $5)
-                   ON CONFLICT (agent_id, pergunta)
+                """INSERT INTO knowledge_base (pergunta, resposta, embedding, source_file)
+                   VALUES ($1, $2, $3, $4)
+                   ON CONFLICT (pergunta)
                    DO UPDATE SET resposta = EXCLUDED.resposta,
                                  embedding = EXCLUDED.embedding,
                                  source_file = EXCLUDED.source_file""",
-                agent_id, pergunta, resposta, emb, source_file,
+                pergunta, resposta, emb, source_file,
             )
 
     # 2) Atualizacao de texto sem re-embed.
     for pergunta, resposta in to_update_text:
         await db.execute(
-            "UPDATE knowledge_base SET resposta = $3 WHERE agent_id = $1 AND pergunta = $2",
-            agent_id, pergunta, resposta,
+            "UPDATE knowledge_base SET resposta = $2 WHERE pergunta = $1",
+            pergunta, resposta,
         )
 
     # 3) Remocoes.
     for pergunta in to_delete:
-        await db.execute(
-            "DELETE FROM knowledge_base WHERE agent_id = $1 AND pergunta = $2",
-            agent_id, pergunta,
-        )
+        await db.execute("DELETE FROM knowledge_base WHERE pergunta = $1", pergunta)
 
-    # ANALYZE melhora o planner/recall do indice ivfflat apos mudancas em massa.
+    # ANALYZE atualiza as estatisticas do planner apos mudancas em massa.
     await db.execute("ANALYZE knowledge_base")
 
     log.info(
@@ -105,7 +102,6 @@ async def ingest(csv_path: Path, agent_id: str) -> None:
             "novas": len(to_embed),
             "atualizadas": len(to_update_text),
             "removidas": len(to_delete),
-            "agent_id": agent_id,
         }},
     )
     await db.close_pool()
@@ -114,14 +110,13 @@ async def ingest(csv_path: Path, agent_id: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ingestao da base de conhecimento (RAG).")
     parser.add_argument("--csv", required=True, help="Caminho do CSV (Pergunta,Resposta)")
-    parser.add_argument("--agent-id", default=os.getenv("DEFAULT_AGENT_ID", "default"))
     args = parser.parse_args()
 
     csv_path = Path(args.csv)
     if not csv_path.exists():
         raise SystemExit(f"Arquivo nao encontrado: {csv_path}")
 
-    asyncio.run(ingest(csv_path, args.agent_id))
+    asyncio.run(ingest(csv_path))
 
 
 if __name__ == "__main__":

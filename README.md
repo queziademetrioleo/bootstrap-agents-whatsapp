@@ -1,8 +1,15 @@
 # WhatsApp AI Agent Bootstrap
 
 Template **open de uso interno** para criar agentes de IA no WhatsApp, gerenciados
-inteiramente no GCP. Clone, configure e deploye. Cada agente novo (cliente/projeto)
-roda no mesmo serviço, com sua própria persona, tools e base de conhecimento.
+inteiramente no GCP.
+
+**Modelo: 1 repositório = 1 cliente = 1 deploy isolado.** Para cada cliente novo,
+você clona este repositório, configura a persona/tools/base e faz o deploy num
+projeto GCP próprio (Cloud Run próprio, Evolution própria, banco próprio).
+Isolamento total: dados, billing e blast radius separados por cliente.
+
+> Cliente médico → `git clone` → deploy. Suporte de vendas de drones → outro
+> `git clone` → outro deploy. E assim por diante.
 
 ## Stack
 
@@ -31,7 +38,7 @@ WhatsApp ──> Evolution API (Compute Engine)
               ▼                  ▼                 ▼                ▼
         Vertex AI         Cloud SQL+PgVector   Memorystore     Evolution API
         (Gemini +         (users, conversas,   (sessão curta)  (envia resposta)
-         embeddings)       RAG, configs)
+         embeddings)       RAG)
 ```
 
 O **webhook receiver** só valida + publica no Pub/Sub e responde 200. O
@@ -49,9 +56,9 @@ via `POST /chat/sendPresence` da Evolution; lógica em `agent/evolution.py:typin
 agent/          core imutável (loop, memória, RAG, tools, app FastAPI)
 tools/          zona do colaborador — uma tool por arquivo (auto-discovery)
 integrations/   clientes de APIs externas — uma por arquivo
-knowledge/      CSVs da base de conhecimento (Pergunta,Resposta) por agente
-scripts/        ingest.py (RAG), create_agent.py, init_db.sql
-config/         configs por ambiente (dev/prod)
+knowledge/      CSVs da base de conhecimento (Pergunta,Resposta)
+config/         agent.yaml (persona/tools/follow-up) + dev.env/prod.env
+scripts/        ingest.py (RAG), init_db.sql
 infra/          Terraform, Dockerfile, cloudbuild.yaml
 docs/           guias passo a passo
 ```
@@ -71,19 +78,24 @@ docs/           guias passo a passo
 Guias detalhados por tópico:
 
 - **Rodar local:** [docs/local-development.md](docs/local-development.md)
-- **Criar um novo agente (cliente):** [docs/creating-a-new-agent.md](docs/creating-a-new-agent.md)
+- **Configurar o agente deste cliente:** [docs/creating-a-new-agent.md](docs/creating-a-new-agent.md)
 - **Adicionar uma tool:** [docs/adding-a-tool.md](docs/adding-a-tool.md)
 - **Adicionar uma integração:** [docs/adding-an-integration.md](docs/adding-an-integration.md)
 - **Atualizar a base de conhecimento (RAG):** [docs/updating-knowledge-base.md](docs/updating-knowledge-base.md)
 - **Agrupar mensagens em bolhas (debounce):** [docs/message-debouncing.md](docs/message-debouncing.md)
 - **Follow-up / re-engajamento:** [docs/follow-ups.md](docs/follow-ups.md)
 
-## Multitenancy
+## Um repositório por cliente
 
-Cada cliente = um agente = uma instância Evolution (número) + um registro em
-`agent_configs` (system prompt, tools ativas) + uma base própria em `knowledge_base`
-filtrada por `agent_id`. Tudo no mesmo Cloud Run, roteado pelo `instance_name` que
-chega no webhook. Sem novo repositório, sem novo serviço.
+Cada cliente é um **deploy isolado**: você clona o repositório, define a persona,
+as tools e a base de conhecimento **dele**, e sobe num **projeto GCP próprio**.
+
+- **Persona / tools / follow-up:** um único arquivo, [`config/agent.yaml`](config/agent.yaml).
+- **Base de conhecimento:** o(s) CSV(s) em `knowledge/` (ingeridos com `ingest.py`).
+- **Infra:** Cloud Run, Cloud SQL, Memorystore e Evolution próprios desse cliente.
+
+Nada é compartilhado entre clientes — cada `git clone` é uma instalação completa e
+independente. Para um cliente novo, repita o processo num projeto GCP novo.
 
 ## Nota sobre o modelo
 

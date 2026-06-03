@@ -1,21 +1,20 @@
 """Follow-up — re-engajamento por cadencia de stages.
 
 Modelo (inspirado no padrao "last_interaction + job de minuto em minuto"):
-  - `conversation_state` guarda, por conversa (instance+phone): a ultima
-    interacao do usuario, o proximo stage a enviar e `next_followup_at`
-    (quando o proximo follow-up vence, pre-calculado).
+  - `conversation_state` guarda, por conversa (`phone`): a ultima interacao do
+    usuario, o proximo stage a enviar e `next_followup_at` (quando o proximo
+    follow-up vence, pre-calculado).
   - Um sweep (Cloud Scheduler -> /tasks/followups/sweep) roda periodicamente,
     reivindica de forma atomica as linhas vencidas e dispara.
 
-Config por agente (em agent_configs.config -> "followup"):
-  {
-    "enabled": true,
-    "stages": [
-      {"after_minutes": 60,   "mode": "fixed",   "message": "Ainda posso ajudar?"},
-      {"after_minutes": 1440, "mode": "summary"},
-      {"after_minutes": 4320, "mode": "fixed",   "message": "Vou encerrar por aqui!"}
-    ]
-  }
+Single-tenant: a config do follow-up vem de config/agent.yaml (via
+agent/agent_config.py), nao de uma tabela com varias linhas.
+
+Config (em config/agent.yaml -> "followup"):
+  enabled: true
+  stages:
+    - {after_minutes: 60,   mode: fixed,   message: "Ainda posso ajudar?"}
+    - {after_minutes: 1440, mode: summary}
 
 Modos de stage:
   - "fixed"   -> envia o texto literal de `message`.
@@ -33,6 +32,7 @@ from datetime import datetime, timedelta, timezone
 from google.genai import types
 
 from agent import db, evolution, memory
+from agent.agent_config import load_agent_config
 from agent.config import get_settings
 from agent.genai_client import get_client
 from agent.logging_config import get_logger
@@ -53,9 +53,7 @@ def _stages(cfg: AgentConfig | None) -> list[dict]:
 # --------------------------------------------------------- agendamento (write) --
 
 
-async def on_user_message(
-    cfg: AgentConfig, user_id: int, instance_name: str, phone: str
-) -> None:
+async def on_user_message(cfg: AgentConfig, user_id: int, phone: str) -> None:
     """Reinicia a cadencia quando o usuario manda mensagem (responde -> reseta).
 
     Agenda o stage 0 se o follow-up estiver ativo; senao deixa pausado.
@@ -72,19 +70,18 @@ async def on_user_message(
 
     await db.execute(
         """INSERT INTO conversation_state
-             (instance_name, phone, user_id, agent_id, last_interaction_at,
+             (phone, user_id, last_interaction_at,
               followup_stage, next_followup_at, last_followup_at, followup_paused, updated_at)
-           VALUES ($1,$2,$3,$4,$5,0,$6,NULL,$7,$5)
-           ON CONFLICT (instance_name, phone) DO UPDATE SET
+           VALUES ($1,$2,$3,0,$4,NULL,$5,$3)
+           ON CONFLICT (phone) DO UPDATE SET
              user_id = EXCLUDED.user_id,
-             agent_id = EXCLUDED.agent_id,
              last_interaction_at = EXCLUDED.last_interaction_at,
              followup_stage = 0,
              next_followup_at = EXCLUDED.next_followup_at,
              last_followup_at = NULL,
              followup_paused = EXCLUDED.followup_paused,
              updated_at = EXCLUDED.updated_at""",
-        instance_name, phone, user_id, cfg.agent_id, now, next_at, paused,
+        phone, user_id, now, next_at, paused,
     )
 
 
@@ -97,8 +94,8 @@ _CLAIM_SQL = """
 UPDATE conversation_state cs
 SET next_followup_at = now() + make_interval(mins => $2),
     updated_at = now()
-WHERE (cs.instance_name, cs.phone) IN (
-    SELECT instance_name, phone FROM conversation_state
+WHERE cs.phone IN (
+    SELECT phone FROM conversation_state
     WHERE next_followup_at IS NOT NULL
       AND next_followup_at <= now()
       AND NOT followup_paused
@@ -106,7 +103,7 @@ WHERE (cs.instance_name, cs.phone) IN (
     LIMIT $1
     FOR UPDATE SKIP LOCKED
 )
-RETURNING cs.instance_name, cs.phone, cs.user_id, cs.agent_id, cs.followup_stage;
+RETURNING cs.phone, cs.user_id, cs.followup_stage;
 """
 
 
@@ -121,7 +118,7 @@ async def run_sweep() -> int:
     sent = 0
     for r in rows:
         try:
-            if await _fire(r["instance_name"], r["phone"], r["user_id"], r["followup_stage"]):
+            if await _fire(r["phone"], r["user_id"], r["followup_stage"]):
                 sent += 1
         except Exception:  # noqa: BLE001 — o lease garante o retry no proximo sweep
             log.exception("Falha ao disparar follow-up")
@@ -130,11 +127,11 @@ async def run_sweep() -> int:
     return sent
 
 
-async def _fire(instance_name: str, phone: str, user_id: int, stage: int) -> bool:
-    cfg = await memory.get_agent_config(instance_name)
+async def _fire(phone: str, user_id: int, stage: int) -> bool:
+    cfg = load_agent_config()
     stages = _stages(cfg)
     if not stages or stage >= len(stages):
-        await _pause(instance_name, phone)
+        await _pause(phone)
         return False
 
     stage_def = stages[stage]
@@ -146,42 +143,42 @@ async def _fire(instance_name: str, phone: str, user_id: int, stage: int) -> boo
 
     advanced = False
     if text:
-        await evolution.send_text(instance_name, phone, text)
+        await evolution.send_text(cfg.instance_name, phone, text)
         await memory.save_turn(user_id, "agent", text)
         advanced = True
 
-    await _advance(instance_name, phone, stage, stages)
+    await _advance(phone, stage, stages)
     return advanced
 
 
-async def _advance(instance_name: str, phone: str, stage: int, stages: list[dict]) -> None:
+async def _advance(phone: str, stage: int, stages: list[dict]) -> None:
     now = datetime.now(timezone.utc)
     new_stage = stage + 1
     if new_stage < len(stages):
         next_at = now + timedelta(minutes=float(stages[new_stage]["after_minutes"]))
         await db.execute(
             """UPDATE conversation_state
-               SET followup_stage=$3, next_followup_at=$4, last_followup_at=$5,
-                   followup_paused=false, updated_at=$5
-               WHERE instance_name=$1 AND phone=$2""",
-            instance_name, phone, new_stage, next_at, now,
+               SET followup_stage=$2, next_followup_at=$3, last_followup_at=$4,
+                   followup_paused=false, updated_at=$4
+               WHERE phone=$1""",
+            phone, new_stage, next_at, now,
         )
     else:
         await db.execute(
             """UPDATE conversation_state
-               SET followup_stage=$3, next_followup_at=NULL, last_followup_at=$4,
-                   followup_paused=true, updated_at=$4
-               WHERE instance_name=$1 AND phone=$2""",
-            instance_name, phone, new_stage, now,
+               SET followup_stage=$2, next_followup_at=NULL, last_followup_at=$3,
+                   followup_paused=true, updated_at=$3
+               WHERE phone=$1""",
+            phone, new_stage, now,
         )
 
 
-async def _pause(instance_name: str, phone: str) -> None:
+async def _pause(phone: str) -> None:
     await db.execute(
         """UPDATE conversation_state
            SET followup_paused=true, next_followup_at=NULL, updated_at=now()
-           WHERE instance_name=$1 AND phone=$2""",
-        instance_name, phone,
+           WHERE phone=$1""",
+        phone,
     )
 
 

@@ -55,17 +55,19 @@ TOOL = AgentTool(
 | `domain` | específica de um cliente/projeto | precisa estar em `tools_enabled` do agente |
 | `integration` | usa uma API externa (importa de `integrations/`) | igual a domain |
 
-## Ativar uma tool de domínio num agente
+## Ativar uma tool de domínio
 
-Tools `universal` já entram em todos os agentes. Tools `domain`/`integration`
-precisam ser listadas no `tools_enabled` do agente:
+Tools `universal` já entram automaticamente. Tools `domain`/`integration` precisam
+ser listadas em `tools_enabled` no [`config/agent.yaml`](../config/agent.yaml):
 
-```bash
-python scripts/create_agent.py \
-  --instance loja-acme --agent-id acme \
-  --system-prompt "..." \
-  --tools consultar_clima check_order_status
+```yaml
+tools_enabled:
+  - consultar_clima
+  - check_order_status
 ```
+
+O nome corresponde ao campo `name` do `AgentTool`. Reinicie o `make run` (local)
+ou faça um novo deploy (produção) para a mudança valer.
 
 ## ⚠️ Segurança — não confie nos argumentos do modelo
 

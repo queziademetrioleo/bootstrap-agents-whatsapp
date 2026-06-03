@@ -159,7 +159,7 @@ docker run -d --name agent-redis -p 6380:6379 redis:7
 until docker exec agent-pg pg_isready -U agent >/dev/null 2>&1; do sleep 1; done
 
 docker exec -i agent-pg psql -U agent -d agent < scripts/init_db.sql
-PYTHONPATH=. python scripts/ingest.py --csv knowledge/default.csv --agent-id default
+PYTHONPATH=. python scripts/ingest.py --csv knowledge/default.csv
 ```
 
 ## Passo 5 — Executar a aplicação

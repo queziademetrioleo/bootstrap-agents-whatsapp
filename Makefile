@@ -24,7 +24,7 @@ dev-up: ## Sobe Postgres+Redis, espera ficar pronto, aplica schema e ingere a ba
 	@echo "📐  Aplicando o schema..."
 	docker exec -i agent-pg psql -U agent -d agent < scripts/init_db.sql
 	@echo "📚  Ingerindo a base de conhecimento de exemplo..."
-	. .venv/bin/activate && PYTHONPATH=. python scripts/ingest.py --csv knowledge/default.csv --agent-id default
+	. .venv/bin/activate && PYTHONPATH=. python scripts/ingest.py --csv knowledge/default.csv
 	@echo "✅  Pronto! Banco e base prontos. Rode 'make run' para subir a API."
 
 dev-down: ## Para e remove os containers locais (Postgres + Redis)
@@ -34,8 +34,8 @@ dev-down: ## Para e remove os containers locais (Postgres + Redis)
 db-schema: ## Aplica so o schema no Postgres local (via docker exec — nao precisa de psql instalado)
 	docker exec -i agent-pg psql -U agent -d agent < scripts/init_db.sql
 
-ingest: ## Ingere a base de conhecimento. Uso: make ingest CSV=knowledge/default.csv AGENT=default
-	. .venv/bin/activate && PYTHONPATH=. python scripts/ingest.py --csv $(CSV) --agent-id $(AGENT)
+ingest: ## Ingere a base de conhecimento. Uso: make ingest CSV=knowledge/default.csv
+	. .venv/bin/activate && PYTHONPATH=. python scripts/ingest.py --csv $(CSV)
 
 lint: ## Roda o ruff
 	. .venv/bin/activate && ruff check .

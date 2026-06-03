@@ -1,61 +1,62 @@
-# Como criar um novo agente (novo cliente)
+# Configurar o agente deste cliente
 
-Um agente novo **não** exige novo repositório nem novo serviço. Tudo roda no mesmo
-Cloud Run, roteado pelo `instance_name` que chega no webhook. Criar um agente são
-3 passos.
+**1 repositório = 1 cliente = 1 deploy.** Para um cliente novo você clona o
+repositório e configura **três coisas** (persona, base de conhecimento, tools).
+Não há tabela de agentes nem roteamento — este clone serve um único cliente.
 
-## 1. Criar a instância na Evolution (número de WhatsApp)
+> Para um segundo cliente, faça outro `git clone` e repita num projeto GCP
+> próprio. Nada é compartilhado.
 
-A Evolution roda na VM (Compute Engine). Use a API REST dela (IP no output
-`evolution_external_ip`, API key no output `evolution_api_key`):
+## 1. Editar a persona e as tools (`config/agent.yaml`)
+
+Abra [`config/agent.yaml`](../config/agent.yaml) e defina o agente:
+
+```yaml
+instance_name: clinica-x        # nome da instância na Evolution (o número do cliente)
+
+system_prompt: |
+  Voce e a atendente virtual da Clinica X. Responda em portugues, de forma
+  cordial e objetiva. Use a base de conhecimento e nao invente informacoes.
+
+tools_enabled:
+  - check_order_status          # tools de domínio/integração (as universais já entram)
+
+followup:
+  enabled: false                # ou true + stages (ver follow-ups.md)
+```
+
+## 2. Montar a base de conhecimento (FAQ)
+
+Edite `knowledge/default.csv` (colunas `Pergunta`, `Resposta`) com o FAQ do
+cliente e ingira:
+
+```bash
+python scripts/ingest.py --csv knowledge/default.csv
+```
+
+Detalhes: [updating-knowledge-base.md](updating-knowledge-base.md).
+
+## 3. Criar a instância na Evolution (parear o número)
+
+Após o deploy (ver [deploy-gcp.md](deploy-gcp.md)), a Evolution está rodando na VM.
+Crie a instância com o **mesmo `instance_name`** do `agent.yaml` e pareie o número:
 
 ```bash
 EVO=http://EVOLUTION_IP:8080
-KEY=SUA_API_KEY
+KEY=$(terraform -chdir=infra/terraform output -raw evolution_api_key)
+TOKEN=$(terraform -chdir=infra/terraform output -raw webhook_token)
+WEBHOOK=$(terraform -chdir=infra/terraform output -raw webhook_url)
 
 # criar a instância
 curl -X POST $EVO/instance/create -H "apikey: $KEY" -H 'Content-Type: application/json' \
-  -d '{"instanceName":"loja-acme","integration":"WHATSAPP-BAILEYS"}'
+  -d '{"instanceName":"clinica-x","integration":"WHATSAPP-BAILEYS"}'
 
-# parear o número (abre QR Code)
-curl $EVO/instance/connect/loja-acme -H "apikey: $KEY"
+# parear o número (retorna o QR Code)
+curl $EVO/instance/connect/clinica-x -H "apikey: $KEY"
 
-# apontar o webhook desta instância para o Cloud Run.
-# IMPORTANTE: envie o header `x-webhook-token` com o token (output `webhook_token`
-# do Terraform) — o app rejeita (401) qualquer webhook sem o token correto.
-curl -X POST $EVO/webhook/set/loja-acme -H "apikey: $KEY" -H 'Content-Type: application/json' \
-  -d '{
-    "url":"https://SEU_WEBHOOK_URL/webhook",
-    "enabled":true,
-    "events":["MESSAGES_UPSERT","CONNECTION_UPDATE"],
-    "headers":{"x-webhook-token":"SEU_WEBHOOK_TOKEN"}
-  }'
-```
-
-> O `instanceName` (`loja-acme`) é a **identidade do agente** — ele chega no webhook
-> e é usado para carregar a config certa.
-
-## 2. Registrar a config do agente
-
-Um registro em `agent_configs` define persona + tools ativas:
-
-```bash
-python scripts/create_agent.py \
-  --instance loja-acme \
-  --agent-id acme \
-  --system-prompt "Voce e a atendente virtual da Loja Acme. Responda em portugues, cordial e objetiva. Use a base de conhecimento e nao invente informacoes." \
-  --tools check_order_status
-```
-
-- `--instance`: o mesmo `instanceName` da Evolution.
-- `--agent-id`: isola a base de conhecimento (passo 3). Pode ser igual ao instance.
-- `--tools`: tools de domínio/integração a ativar (as `universal` já entram sozinhas).
-
-## 3. Subir a base de conhecimento do agente
-
-```bash
-# crie knowledge/acme.csv com as colunas Pergunta,Resposta
-python scripts/ingest.py --csv knowledge/acme.csv --agent-id acme
+# apontar o webhook para o Cloud Run, COM o token de autenticação
+curl -X POST $EVO/webhook/set/clinica-x -H "apikey: $KEY" -H 'Content-Type: application/json' \
+  -d "{\"url\":\"$WEBHOOK\",\"enabled\":true,\"events\":[\"MESSAGES_UPSERT\",\"CONNECTION_UPDATE\"],\"headers\":{\"x-webhook-token\":\"$TOKEN\"}}"
 ```
 
 ## Pronto
@@ -63,13 +64,15 @@ python scripts/ingest.py --csv knowledge/acme.csv --agent-id acme
 Mande uma mensagem para o número pareado. O fluxo:
 
 ```
-WhatsApp(loja-acme) → Evolution → webhook → Pub/Sub → processador
-   → carrega agent_config de 'loja-acme' (persona + tools)
-   → RAG na base 'acme'
+WhatsApp → Evolution → webhook → Pub/Sub → processador
+   → carrega config/agent.yaml (persona + tools)
+   → RAG na base de conhecimento
    → Gemini responde → volta pelo WhatsApp
 ```
 
-## Atualizar um agente existente
+## Atualizar o agente depois
 
-`create_agent.py` faz upsert: rode de novo com os novos valores para trocar a
-persona ou as tools. Para a base de conhecimento, edite o CSV e rode `ingest.py`.
+- **Persona / tools / follow-up:** edite `config/agent.yaml`. Em local, reinicie
+  o `make run`. Em produção, faça um novo deploy (a config é empacotada na imagem).
+- **Base de conhecimento:** edite o CSV e rode `ingest.py` (efeito imediato, sem
+  redeploy).

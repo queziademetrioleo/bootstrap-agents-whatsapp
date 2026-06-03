@@ -1,14 +1,14 @@
 # Follow-up (re-engajamento)
 
 O agente pode mandar mensagens de follow-up quando o usuário some, em **stages**
-com cadência crescente. É **por agente** (cada cliente configura o seu) e pode
-ficar ligado ou desligado.
+com cadência crescente. Configura-se em `config/agent.yaml` e pode ficar ligado
+ou desligado.
 
 ## Como funciona (o mecanismo)
 
 Inspirado no padrão "guardar a última interação + um job de minuto em minuto":
 
-- A tabela `conversation_state` guarda, por conversa (`instance` + `phone`):
+- A tabela `conversation_state` guarda, por conversa (`phone`):
   `last_interaction_at`, o `followup_stage` atual e `next_followup_at`
   (quando o próximo follow-up vence, **pré-calculado**).
 - Um **Cloud Scheduler** (cron, default a cada minuto) chama
@@ -18,19 +18,17 @@ Inspirado no padrão "guardar a última interação + um job de minuto em minuto
 - Quando o usuário responde, a cadência **reinicia do stage 0**
   (`core.process_message` chama `followup.on_user_message`).
 
-## Configuração (por agente)
+## Configuração
 
-Fica em `agent_configs.config["followup"]`:
+Fica em `config/agent.yaml`, no bloco `followup`:
 
-```json
-{
-  "enabled": true,
-  "stages": [
-    { "after_minutes": 60,   "mode": "fixed",   "message": "Oi! Ainda posso te ajudar? 😊" },
-    { "after_minutes": 1440, "mode": "summary" },
-    { "after_minutes": 4320, "mode": "fixed",   "message": "Vou encerrar por aqui, qualquer coisa é só chamar!" }
-  ]
-}
+```yaml
+followup:
+  enabled: true
+  stages:
+    - {after_minutes: 60,   mode: fixed,   message: "Oi! Ainda posso te ajudar? 😊"}
+    - {after_minutes: 1440, mode: summary}
+    - {after_minutes: 4320, mode: fixed,   message: "Vou encerrar por aqui, qualquer coisa é só chamar!"}
 ```
 
 - **`enabled`** — liga/desliga o follow-up.
@@ -42,20 +40,8 @@ Fica em `agent_configs.config["followup"]`:
   - `"summary"` → gera uma mensagem contextual via Gemini, a partir do **resumo
     do histórico** daquela conversa (retoma o assunto, sem ser insistente).
 
-### Definindo na criação do agente
-
-```bash
-python scripts/create_agent.py \
-  --instance loja-acme --agent-id acme \
-  --system-prompt "Voce e a atendente da Loja Acme..." \
-  --tools check_order_status \
-  --followup '{"enabled":true,"stages":[
-      {"after_minutes":60,"mode":"fixed","message":"Ainda posso te ajudar?"},
-      {"after_minutes":1440,"mode":"summary"}
-  ]}'
-```
-
-Para **desligar**, use `"enabled": false` (ou simplesmente não defina o bloco).
+Para **desligar**, use `enabled: false`. Após editar, reinicie o `make run` (local)
+ou faça um novo deploy (produção) — a config é empacotada na imagem.
 
 ## Variáveis do mecanismo (globais)
 

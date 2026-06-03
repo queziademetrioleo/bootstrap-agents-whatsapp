@@ -23,8 +23,8 @@ Como rastreio meu pedido?,"Me informe o numero do pedido que eu consulto."
 Sempre que editar o CSV, rode o `ingest.py`:
 
 ```bash
-python scripts/ingest.py --csv knowledge/acme.csv --agent-id acme
-# ou: make ingest CSV=knowledge/acme.csv AGENT=acme
+python scripts/ingest.py --csv knowledge/default.csv
+# ou: make ingest CSV=knowledge/default.csv
 ```
 
 O script sincroniza de forma inteligente (zero downtime — o agente continua
@@ -41,7 +41,7 @@ respondendo durante a ingestão):
 
 A cada mensagem, o sistema:
 1. gera o embedding da mensagem do usuário (`text-embedding-004`, 768 dims);
-2. busca no PgVector os pares mais próximos do `agent_id`;
+2. busca no PgVector os pares mais próximos na base de conhecimento;
 3. retorna até **5** resultados com **score ≥ 0.75** (cosine similarity);
 4. injeta as respostas encontradas no system prompt — **sem** o modelo precisar
    chamar tool.
@@ -49,11 +49,11 @@ A cada mensagem, o sistema:
 Se nada passar do threshold, nenhum contexto é injetado e o agente responde só com
 o system prompt. Ajuste o threshold/top-k em `RAG_SCORE_THRESHOLD` / `RAG_TOP_K`.
 
-## Múltiplos agentes
+## Vários CSVs
 
-Cada agente tem `agent_id` próprio → bases isoladas no mesmo banco. Um CSV por
-agente: `knowledge/acme.csv` (`--agent-id acme`), `knowledge/loja2.csv`
-(`--agent-id loja2`), etc.
+Como é single-tenant (uma base por cliente), você pode dividir o FAQ em vários
+arquivos e ingerir cada um — todos caem na mesma base. A sincronização é por
+`source_file`, então rodar `ingest.py` para um CSV não apaga o que veio de outro.
 
 ## Índice de similaridade
 

@@ -24,3 +24,6 @@ redis==5.2.1
 # --- HTTP client (integracoes externas) ---
 httpx==0.28.1
 tenacity==9.0.0
+
+# --- Config do agente (config/agent.yaml) ---
+PyYAML==6.0.2

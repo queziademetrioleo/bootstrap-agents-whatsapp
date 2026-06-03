@@ -80,15 +80,18 @@ class Settings(BaseSettings):
     )
 
     # --- Follow-up (re-engajamento) ---
-    # A config por agente fica em agent_configs.config["followup"]. Aqui ficam
+    # A config do follow-up fica em config/agent.yaml ("followup"). Aqui ficam
     # apenas os parametros do mecanismo de sweep.
     scheduler_sa_email: str = ""        # SA do Cloud Scheduler autorizada no sweep
     followup_sweep_batch: int = 100     # quantas conversas reivindicar por sweep
     followup_lease_minutes: int = 10    # backoff/lease ao reivindicar (anti corrida)
     processed_retention_days: int = 7   # idade maxima dos registros de idempotencia
 
+    # --- Agente (single-tenant) ---
+    # 1 repo = 1 cliente. A persona/tools/follow-up vivem neste arquivo YAML.
+    agent_config_path: str = "config/agent.yaml"
+
     # --- Runtime ---
-    default_agent_id: str = "default"
     max_tool_iterations: int = 6
     env: str = "dev"
     log_level: str = "INFO"

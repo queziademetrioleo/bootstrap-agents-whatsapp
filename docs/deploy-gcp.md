@@ -176,7 +176,7 @@ aqui.
 
 ```bash
 # (a confirmar) exemplo conceitual, de dentro da VPC:
-# PYTHONPATH=. python scripts/ingest.py --csv knowledge/default.csv --agent-id default
+# PYTHONPATH=. python scripts/ingest.py --csv knowledge/default.csv
 ```
 
 ---

@@ -4,10 +4,10 @@ Este guia é o ponto de partida para qualquer pessoa que vá **configurar um age
 criar tools, integrar APIs externas ou atualizar a base de FAQ**. Ele dá o
 panorama e aponta para os guias detalhados de cada tópico.
 
-A ideia central do template: você **não precisa entender o core** para criar ou
-estender um agente. Tudo que você mexe está em quatro pastas — `tools/`,
-`integrations/`, `knowledge/` e `config/` — e em um registro no banco
-(`agent_configs`). O resto (`agent/`) é infraestrutura imutável.
+A ideia central do template: você **não precisa entender o core** para configurar
+o agente. Tudo que você mexe está em um arquivo de config (`config/agent.yaml`) e
+em três pastas — `tools/`, `integrations/`, `knowledge/`. O resto (`agent/`) é
+infraestrutura imutável.
 
 ---
 
@@ -16,11 +16,11 @@ estender um agente. Tudo que você mexe está em quatro pastas — `tools/`,
 | Pasta | É core? | Você mexe? |
 |-------|---------|------------|
 | `agent/` | ✅ core imutável | ❌ não (sem decisão do time) |
+| `config/agent.yaml` | ❌ | ✅ persona, tools ativas e follow-up do cliente |
 | `tools/` | ❌ | ✅ uma tool por arquivo |
 | `integrations/` | ❌ | ✅ um cliente de API por arquivo |
-| `knowledge/` | ❌ | ✅ CSVs de FAQ por agente |
-| `config/` | ❌ | ✅ variáveis por ambiente |
-| `scripts/` | parcial | ✅ você roda (`ingest.py`, `create_agent.py`) |
+| `knowledge/` | ❌ | ✅ CSVs de FAQ |
+| `scripts/` | parcial | ✅ você roda (`ingest.py`) |
 | `infra/` | infra | só quem faz deploy |
 
 O `agent/` faz o trabalho pesado (receber a mensagem, RAG, chamar o Gemini,
@@ -40,16 +40,18 @@ agent/            core imutável (não mexa)
 ├── tool_registry.py  auto-discovery das tools
 ├── followup.py       cadência de re-engajamento
 ├── guardrails.py     Model Armor (anti prompt-injection)
-├── memory.py         usuários, histórico, idempotência, config de agente
+├── agent_config.py   carrega config/agent.yaml (persona/tools/follow-up)
+├── memory.py         usuários, histórico, idempotência
 ├── redis_client.py   sessão curta de conversa
 ├── evolution.py      envio de mensagem / "digitando..."
 └── ...
 
+config/agent.yaml 👈 SUA ZONA — persona, tools ativas e follow-up DESTE cliente
 tools/            👈 SUA ZONA — uma tool por arquivo
 integrations/     👈 SUA ZONA — clientes de APIs externas
-knowledge/        👈 SUA ZONA — CSVs de FAQ (Pergunta,Resposta) por agente
-config/           👈 SUA ZONA — dev.env / prod.env
-scripts/          ingest.py (RAG), create_agent.py, init_db.sql
+knowledge/        👈 SUA ZONA — CSVs de FAQ (Pergunta,Resposta)
+config/           dev.env / prod.env (variáveis por ambiente)
+scripts/          ingest.py (RAG), init_db.sql
 infra/            Terraform, Dockerfile, Cloud Build (deploy)
 docs/             os guias (você está lendo um)
 ```
@@ -58,32 +60,36 @@ docs/             os guias (você está lendo um)
 
 ## 3. Anatomia de um agente
 
-Um "agente" (um cliente/projeto) é definido por **um registro na tabela
-`agent_configs`** mais a base de conhecimento dele. Não é preciso novo
-repositório nem novo serviço — tudo roda no mesmo Cloud Run, roteado pelo
-`instance_name` que chega no webhook.
+**1 repositório = 1 cliente = 1 agente.** A identidade do agente vive num único
+arquivo que você edita: [`config/agent.yaml`](../config/agent.yaml). Sem tabela no
+banco, sem roteamento — este clone serve um cliente.
 
-Campos de `agent_configs`:
+```yaml
+# config/agent.yaml
+instance_name: default        # nome da instância na Evolution (o número do cliente)
+
+system_prompt: |              # a persona / instruções do agente
+  Voce e a atendente da Clinica X. Responda em portugues...
+
+tools_enabled:                # tools de domínio/integração ativas
+  - check_order_status        # (as universais entram sozinhas)
+
+followup:                     # re-engajamento (opcional)
+  enabled: false
+  stages:
+    - {after_minutes: 60, mode: fixed, message: "Ainda posso ajudar?"}
+```
 
 | Campo | O que é |
 |-------|---------|
-| `instance_name` | nome da instância da Evolution (= o número de WhatsApp). Chega no webhook e identifica o agente. |
-| `agent_id` | isola a base de conhecimento (`knowledge_base.agent_id`). |
+| `instance_name` | nome da instância da Evolution (o número de WhatsApp deste cliente). |
 | `system_prompt` | a persona/instruções do agente. |
-| `tools_enabled` | lista de tools de domínio/integração ativas (as universais entram sozinhas). |
-| `config` | JSONB para configurações extras (ex.: `followup`). |
+| `tools_enabled` | tools de domínio/integração ativas (as universais entram sozinhas). |
+| `followup` | cadência de re-engajamento (ver seção 7). |
 
-Você **não edita o banco na mão** — usa o script:
-
-```bash
-python scripts/create_agent.py \
-  --instance loja-acme \
-  --agent-id acme \
-  --system-prompt "Voce e a atendente da Loja Acme..." \
-  --tools check_order_status
-```
-
-Roteiro completo de um agente novo: **[creating-a-new-agent.md](creating-a-new-agent.md)**.
+Editou? Em local, reinicie o `make run`. Em produção, um novo deploy publica a
+config (ela é empacotada na imagem). Roteiro completo:
+**[creating-a-new-agent.md](creating-a-new-agent.md)**.
 
 ---
 
@@ -160,10 +166,10 @@ Quais os horarios de atendimento?,"Funcionamos de seg a sex, 8h-18h, e sabados 9
 Como rastreio meu pedido?,"Me informe o numero do pedido que eu consulto."
 ```
 
-Depois de editar, rode a ingestão (um CSV por agente, via `agent_id`):
+Depois de editar, rode a ingestão (base única deste cliente):
 
 ```bash
-python scripts/ingest.py --csv knowledge/acme.csv --agent-id acme
+python scripts/ingest.py --csv knowledge/default.csv
 ```
 
 Como funciona o threshold (0.75), o top-k e a sincronização sem downtime:
@@ -171,13 +177,13 @@ Como funciona o threshold (0.75), o top-k e a sincronização sem downtime:
 
 ---
 
-## 7. Features de UX (configuráveis por agente)
+## 7. Features de UX
 
 | Feature | O que faz | Onde liga |
 |---------|-----------|-----------|
 | **Debounce** | agrupa várias bolhas ("oi" / "tudo bem?" / "tenho dúvida") numa única resposta | env `DEBOUNCE_SECONDS` (0 desliga) → [message-debouncing.md](message-debouncing.md) |
 | **"Digitando..."** | mostra o status enquanto o agente gera a resposta | env `TYPING_INDICATOR` |
-| **Follow-up** | re-engaja quem sumiu, em stages (`fixed` = msg fixa, `summary` = gerada do histórico) | por agente em `agent_configs.config.followup` → [follow-ups.md](follow-ups.md) |
+| **Follow-up** | re-engaja quem sumiu, em stages (`fixed` = msg fixa, `summary` = gerada do histórico) | `followup` em `config/agent.yaml` → [follow-ups.md](follow-ups.md) |
 | **Guardrails** | Model Armor filtra prompt injection, jailbreak, conteúdo perigoso | env `MODEL_ARMOR_ENABLED` |
 | **Echo (dev)** | em local, loga a resposta em vez de enviar à Evolution | env `EVOLUTION_ECHO=true` |
 
@@ -190,7 +196,7 @@ Para entender o sistema sem ler o core, a sequência do `agent/core.py`:
 1. **Idempotência** — descarta a mensagem se já foi processada.
 2. **Contexto** — carrega o perfil do usuário e o histórico curto (Redis).
 3. **Guardrail de entrada** — Model Armor checa a mensagem (se ligado).
-4. **RAG** — busca na base de conhecimento do `agent_id` e injeta o que achar.
+4. **RAG** — busca na base de conhecimento e injeta o que achar.
 5. **Gemini + tools** — chama o modelo; se ele pedir uma tool, executa e devolve;
    repete até a resposta final.
 6. **Guardrail de saída** — checa a resposta gerada (se ligado).
